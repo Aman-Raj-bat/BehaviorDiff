@@ -88,6 +88,18 @@ export async function requestJson({ baseUrl, request, timeoutMs, signal }) {
         status: response.status,
         rawBody: text.slice(0, MAX_ERROR_BODY_BYTES),
         rawBodyTruncated: text.length > MAX_ERROR_BODY_BYTES,
+        cause: error,
+      });
+    }
 
-  });
+    return {
+      status: response.status,
+      headers: Object.fromEntries(response.headers.entries()),
+      body,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+    };
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', abortRequest);
+  }
 }
