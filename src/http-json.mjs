@@ -30,5 +30,22 @@ export async function requestJson({ baseUrl, request, timeoutMs, signal }) {
       throw new HttpJsonError('CONFIG_ERROR', 'Service base URL must use HTTP on loopback');
     }
 
+    const headers = { accept: 'application/json' };
+    const init = {
+      method: request.method,
+      headers,
+      signal: controller.signal,
+      redirect: 'error',
+    };
+    if (request.body !== undefined) {
+      headers['content-type'] = 'application/json';
+      const serializedBody = JSON.stringify(request.body);
+      if (Buffer.byteLength(serializedBody, 'utf8') > MAX_REQUEST_BODY_BYTES) {
+        throw new HttpJsonError('CONFIG_ERROR', `Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes`, {
+          maxBytes: MAX_REQUEST_BODY_BYTES,
+        });
+      }
+      init.body = serializedBody;
 
+  });
 }
