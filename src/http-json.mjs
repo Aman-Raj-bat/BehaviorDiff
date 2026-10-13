@@ -73,6 +73,21 @@ export async function requestJson({ baseUrl, request, timeoutMs, signal }) {
       text = await response.text();
     } catch (error) {
       if (error?.name === 'AbortError' && signal?.aborted) {
+        throw new HttpJsonError('RUN_CANCELLED', 'Run was cancelled');
+      }
+      if (error?.name === 'AbortError') {
+        throw new HttpJsonError('REQUEST_TIMEOUT', `Request timed out after ${timeoutMs} ms`, { timeoutMs });
+      }
+      throw new HttpJsonError('TRANSPORT_ERROR', error.message, { cause: error });
+    }
+    let body;
+    try {
+      body = JSON.parse(text);
+    } catch (error) {
+      throw new HttpJsonError('NON_JSON_RESPONSE', 'Service returned malformed JSON', {
+        status: response.status,
+        rawBody: text.slice(0, MAX_ERROR_BODY_BYTES),
+        rawBodyTruncated: text.length > MAX_ERROR_BODY_BYTES,
 
   });
 }
