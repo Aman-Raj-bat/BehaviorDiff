@@ -58,6 +58,21 @@ export async function requestJson({ baseUrl, request, timeoutMs, signal }) {
     } catch (error) {
       if (error instanceof HttpJsonError) throw error;
       if (error?.name === 'AbortError') {
+        if (signal?.aborted) {
+          throw new HttpJsonError('RUN_CANCELLED', 'Run was cancelled');
+        }
+        throw new HttpJsonError('REQUEST_TIMEOUT', `Request timed out after ${timeoutMs} ms`, {
+          timeoutMs,
+        });
+      }
+      throw new HttpJsonError('TRANSPORT_ERROR', error.message, { cause: error });
+    }
+
+    let text;
+    try {
+      text = await response.text();
+    } catch (error) {
+      if (error?.name === 'AbortError' && signal?.aborted) {
 
   });
 }
