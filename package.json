@@ -1,0 +1,10 @@
+{
+  "name": "behaviordiff",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline semantic behavior comparison for two local HTTP/JSON fixture services",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0 <23"
+  }
+}
