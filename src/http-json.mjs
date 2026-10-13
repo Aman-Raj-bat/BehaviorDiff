@@ -46,6 +46,18 @@ export async function requestJson({ baseUrl, request, timeoutMs, signal }) {
         });
       }
       init.body = serializedBody;
+    }
+
+    let response;
+    try {
+      const target = new URL(request.path, baseUrl);
+      if (target.origin !== base.origin) {
+        throw new HttpJsonError('CONFIG_ERROR', 'Request path escaped the configured loopback service');
+      }
+      response = await fetch(target, init);
+    } catch (error) {
+      if (error instanceof HttpJsonError) throw error;
+      if (error?.name === 'AbortError') {
 
   });
 }
