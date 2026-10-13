@@ -1,0 +1,4 @@
+artifacts/
+coverage/
+node_modules/
+*.log
