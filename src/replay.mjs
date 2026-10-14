@@ -123,6 +123,36 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
         await services[side].waitForExit();
       }
       sideData[side].result = result;
+    }
+
+    for (const side of ['reference', 'candidate']) {
+      const data = sideData[side];
+      if (data.result?.response) {
+        const capture = captureValues(step, data.result.response.body, contexts[side]);
+        data.captures = capture.captures ?? {};
+        data.captureError = capture.error;
+      } else {
+        data.captures = {};
+      }
+    }
+
+    entry.reference = sideRecord(
+      sideData.reference.request,
+      sideData.reference.result?.response,
+      sideData.reference.result?.error ?? sideData.reference.error,
+      sideData.reference.captures,
+      sideData.reference.captureError,
+      diagnosticRecord(services, 'reference'),
+    );
+    entry.candidate = sideRecord(
+      sideData.candidate.request,
+      sideData.candidate.result?.response,
+      sideData.candidate.result?.error ?? sideData.candidate.error,
+      sideData.candidate.captures,
+      sideData.candidate.captureError,
+      diagnosticRecord(services, 'candidate'),
+    );
+
 
   return {};
 }
