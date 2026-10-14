@@ -38,6 +38,46 @@ function serviceEvidence(fixture, handle, ready) {
 }
 
 function startupReason(side, error) {
+  const stderr = typeof error.stderr === 'string' ? error.stderr : '';
+  return {
+    code: error.code ?? 'STARTUP_FAILURE',
+    side,
+    message: error.message,
+    ...(error.timeoutMs === undefined ? {} : { timeoutMs: error.timeoutMs }),
+    ...(error.exitCode === null || error.exitCode === undefined ? {} : { exitCode: error.exitCode }),
+    ...(error.signal ? { signal: error.signal } : {}),
+    ...(stderr ? { stderr: stderr.slice(0, 4_096), stderrTruncated: stderr.length > 4_096 } : {}),
+  };
+}
+
+async function resetServices(handles, timeoutMs, signal) {
+  const results = await Promise.allSettled([
+    handles.reference.reset(timeoutMs, signal),
+    handles.candidate.reset(timeoutMs, signal),
+  ]);
+  const reset = {};
+  let failure;
+  for (const [index, result] of results.entries()) {
+    const side = ['reference', 'candidate'][index];
+    reset[side] = result.status === 'fulfilled';
+    if (result.status === 'rejected' && !failure) {
+      failure = {
+        code: result.reason?.code === 'RUN_CANCELLED'
+          ? 'RUN_CANCELLED'
+          : result.reason?.code === 'REQUEST_TIMEOUT' ? 'REQUEST_TIMEOUT' : 'RESET_FAILURE',
+        side,
+        message: result.reason?.message ?? 'Fixture reset failed',
+      };
+    }
+  }
+  return { reset, failure };
+}
+
+async function executeReplay(scenario, handles, requestTimeoutMs, signal) {
+  if (signal?.aborted) {
+    const error = new Error('Run was cancelled');
+    error.code = 'RUN_CANCELLED';
+    throw error;
 
   return {};
 }
