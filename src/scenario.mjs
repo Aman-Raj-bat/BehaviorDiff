@@ -74,5 +74,35 @@ function validateSteps(steps, staticVariables) {
       validateTemplateValue(step.request.body, knownVariables, `${label}.request.body`);
     }
 
+    config(isRecord(step.expect) && Number.isInteger(step.expect.status), `${label}.expect.status is required`);
+    config(step.expect.status >= 100 && step.expect.status <= 599, `${label}.expect.status is invalid`);
+    if (Object.hasOwn(step, 'capture')) {
+      config(isRecord(step.capture), `${label}.capture must be an object`);
+      for (const [name, pointer] of Object.entries(step.capture)) {
+        validateVariableName(name, `${label}.capture.${name}`);
+        config(!captureNames.has(name) && !Object.hasOwn(staticVariables, name), `variable ${name} is captured more than once or is static`);
+        try {
+          assertJsonPointer(pointer);
+        } catch (error) {
+          throw new ScenarioConfigError(`${label}.capture.${name}: ${error.message}`);
+        }
+        captureNames.add(name);
+        knownVariables.add(name);
+      }
+    }
+    if (Object.hasOwn(step, 'ignorePaths')) {
+      config(Array.isArray(step.ignorePaths), `${label}.ignorePaths must be an array`);
+      for (const pointer of step.ignorePaths) {
+        try {
+          assertJsonPointer(pointer);
+        } catch (error) {
+          throw new ScenarioConfigError(`${label}.ignorePaths: ${error.message}`);
+        }
+      }
+    }
+  }
+}
+
+
   return scenario;
 }
