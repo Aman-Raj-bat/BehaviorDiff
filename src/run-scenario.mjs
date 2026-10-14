@@ -78,6 +78,46 @@ async function executeReplay(scenario, handles, requestTimeoutMs, signal) {
     const error = new Error('Run was cancelled');
     error.code = 'RUN_CANCELLED';
     throw error;
+  }
+  const resetResult = await resetServices(handles, requestTimeoutMs, signal);
+  if (resetResult.failure) {
+    if (resetResult.failure.code === 'RUN_CANCELLED') {
+      const error = new Error('Run was cancelled');
+      error.code = 'RUN_CANCELLED';
+      throw error;
+    }
+    return {
+      replayed: false,
+      reset: resetResult.reset,
+      reason: resetResult.failure,
+      fatal: true,
+      execution: {
+        outcome: 'INCONCLUSIVE',
+        steps: [],
+        reason: resetResult.failure,
+        regression: false,
+        signature: null,
+      },
+    };
+  }
+  const replay = await replayPair({ scenario, services: handles, requestTimeoutMs, signal });
+  return {
+    replayed: true,
+    reset: resetResult.reset,
+    execution: summarizeReplay(replay),
+  };
+}
+
+export async function runScenario(scenarioPath, outputDirectory, options = {}) {
+  const startedAt = new Date();
+  const startupTimeoutMs = boundedTimeout(options.startupTimeoutMs, 'startupTimeoutMs', 2_000);
+  const requestTimeoutMs = boundedTimeout(options.requestTimeoutMs, 'requestTimeoutMs', 1_000);
+  const shrinkEnabled = options.shrink === true || (options.shrink !== undefined && options.shrink !== false);
+  const shrinkOptions = typeof options.shrink === 'object' ? options.shrink : {};
+  const maxAttempts = shrinkEnabled ? boundedAttempts(shrinkOptions.maxAttempts ?? options.maxAttempts) : undefined;
+  const signal = options.signal;
+  const rawScenario = await readFile(scenarioPath, 'utf8');
+  const scenario = validateScenario(JSON.parse(rawScenario));
 
   return {};
 }
