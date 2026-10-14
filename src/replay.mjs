@@ -153,6 +153,36 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
       diagnosticRecord(services, 'candidate'),
     );
 
+    if (sideData.reference.error || sideData.candidate.error) {
+      steps.push(entry);
+      break;
+    }
+
+    const referenceError = sideData.reference.result?.error;
+    const candidateError = sideData.candidate.result?.error;
+    if (referenceError || candidateError) {
+      if (referenceError && isReferenceBlocking(referenceError)) {
+        reason = {
+          code: referenceError.code === 'NON_JSON_RESPONSE' ? 'REFERENCE_NON_JSON' : referenceError.code,
+          side: 'reference',
+          stepId: step.id,
+          ...errorRecord(referenceError, diagnosticRecord(services, 'reference')),
+        };
+      } else if (candidateError && (candidateError.code === 'REQUEST_TIMEOUT' || candidateError.code === 'TRANSPORT_ERROR')) {
+        reason = {
+          code: candidateError.code,
+          side: 'candidate',
+          stepId: step.id,
+          ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
+        };
+      } else if (candidateError?.code === 'NON_JSON_RESPONSE') {
+        reason = {
+          code: 'CANDIDATE_NON_JSON',
+          side: 'candidate',
+          stepId: step.id,
+          ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
+        };
+        regression = true;
 
   return {};
 }
