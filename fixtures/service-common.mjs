@@ -118,6 +118,36 @@ export function createCartService({ fixture, variant }) {
       return sendJson(response, 200, { ok: true, variant: fixture }, fixture);
     }
 
+    if (method === 'POST' && parsedUrl.pathname === '/reset') {
+      carts.clear();
+      cartCount = 0;
+      requestCount = 0;
+      return sendJson(response, 200, { ok: true }, fixture);
+    }
+
+    if (method === 'POST' && parsedUrl.pathname === '/carts') {
+      await delayFor('create-cart');
+      let body;
+      try {
+        body = await readJson(request);
+      } catch {
+        return badRequest(response, 'body must be JSON', fixture);
+      }
+      if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+        return badRequest(response, 'body must be an object', fixture);
+      }
+      cartCount += 1;
+      const id = `${fixture}-cart-${cartCount}`;
+      const cart = { id, items: [], subtotal: 0, total: 0 };
+      carts.set(id, cart);
+      return sendJson(response, 201, { cartId: id, meta: { requestId: requestId() } }, fixture);
+    }
+
+    if (parts.length === 3 && parts[0] === 'carts' && parts[2] === 'items' && method === 'POST') {
+      const cart = carts.get(parts[1]);
+      if (!cart) return sendJson(response, 404, { error: 'cart not found' }, fixture);
+      let body;
+      try {
 
   });
 }
