@@ -123,6 +123,26 @@ function resolveValue(value, variables, label) {
   if (typeof value === 'string') {
     const exact = value.match(/^\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}$/);
     if (exact) {
+      if (!Object.hasOwn(variables, exact[1])) throw new ScenarioConfigError(`${label} references unresolved variable ${exact[1]}`);
+      return variables[exact[1]];
+    }
+    return value.replace(/\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}/g, (_, name) => {
+      if (!Object.hasOwn(variables, name)) throw new ScenarioConfigError(`${label} references unresolved variable ${name}`);
+      const resolved = variables[name];
+      configScalar(resolved, `${label} variable ${name}`);
+      return String(resolved);
+    });
+  }
+  if (Array.isArray(value)) return value.map((item, index) => resolveValue(item, variables, `${label}[${index}]`));
+  if (isRecord(value)) {
+    if (Object.hasOwn(value, '$var')) {
+      if (!Object.hasOwn(variables, value.$var)) throw new ScenarioConfigError(`${label} references unresolved variable ${value.$var}`);
+      return variables[value.$var];
+    }
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, resolveValue(child, variables, `${label}.${key}`)]));
+  }
+  return value;
+}
 
   return request;
 }
