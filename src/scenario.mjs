@@ -43,6 +43,36 @@ function validateTemplateValue(value, knownVariables, label) {
     return;
   }
 
+  if (!isRecord(value)) return;
+  if (Object.hasOwn(value, '$var')) {
+    config(Object.keys(value).length === 1, `${label} $var object cannot have additional keys`);
+    validateVariableName(value.$var, `${label}.$var`);
+    config(knownVariables.has(value.$var), `${label} references unknown variable ${value.$var}`);
+    return;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    validateTemplateValue(child, knownVariables, `${label}.${key}`);
+  }
+}
+
+function validateSteps(steps, staticVariables) {
+  config(Array.isArray(steps) && steps.length > 0, 'steps must be a non-empty array');
+  const captureNames = new Set();
+  const knownVariables = new Set(Object.keys(staticVariables));
+
+  for (const [index, step] of steps.entries()) {
+    const label = `steps[${index}]`;
+    config(isRecord(step), `${label} must be an object`);
+    config(typeof step.id === 'string' && step.id.length > 0, `${label}.id is required`);
+    config(!steps.slice(0, index).some((prior) => prior.id === step.id), `duplicate step id ${step.id}`);
+    config(isRecord(step.request), `${label}.request must be an object`);
+    config(typeof step.request.method === 'string' && METHODS.has(step.request.method), `${label}.request.method is unsupported`);
+    config(step.request.method !== 'GET' || !Object.hasOwn(step.request, 'body'), `${label}.request.body is not allowed for GET`);
+    validatePath(step.request.path, `${label}.request.path`);
+    validateTemplateValue(step.request.path, knownVariables, `${label}.request.path`);
+    if (Object.hasOwn(step.request, 'body')) {
+      validateTemplateValue(step.request.body, knownVariables, `${label}.request.body`);
+    }
 
   return scenario;
 }
