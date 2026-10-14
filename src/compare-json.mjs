@@ -63,6 +63,26 @@ function collectDifferences(reference, candidate, pointer, ignored, differences,
   if (Object.is(reference, candidate)) return;
 
   if (Array.isArray(reference) && Array.isArray(candidate)) {
+    const length = Math.max(reference.length, candidate.length);
+    for (let index = 0; index < length; index += 1) {
+      collectDifferences(
+        index < reference.length ? reference[index] : MISSING,
+        index < candidate.length ? candidate[index] : MISSING,
+        pointerFor(pointer, index),
+        ignored,
+        differences,
+        ignoredDifferences,
+      );
+    }
+    return;
+  }
+
+  if (isObject(reference) && isObject(candidate)) {
+    const keys = new Set([...Object.keys(reference), ...Object.keys(candidate)]);
+    for (const key of [...keys].sort()) {
+      collectDifferences(
+        Object.hasOwn(reference, key) ? reference[key] : MISSING,
+        Object.hasOwn(candidate, key) ? candidate[key] : MISSING,
 
   return [];
 }
