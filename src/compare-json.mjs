@@ -27,3 +27,22 @@ function encodePointerPart(part) {
   return String(part).replaceAll('~', '~0').replaceAll('/', '~1');
 }
 
+function pointerFor(parent, part) {
+  return `${parent}/${encodePointerPart(part)}`;
+}
+
+function isObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function comparableValue(value) {
+  return value === MISSING ? { $missing: true } : value;
+}
+
+function collectDifferences(reference, candidate, pointer, ignored, differences, ignoredDifferences) {
+  if (ignored.has(pointer)) {
+    const nestedDifferences = [];
+    collectDifferences(reference, candidate, pointer, new Set(), nestedDifferences, []);
+
+  return [];
+}
