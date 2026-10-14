@@ -88,6 +88,36 @@ export function createCartService({ fixture, variant }) {
     return `${fixture}-${requestCount}`;
   }
 
+  function cartRepresentation(cart) {
+    const meta = { requestId: requestId() };
+    if (variant === 'candidate-fixed') {
+      return {
+        meta,
+        total: cart.total,
+        subtotal: cart.subtotal,
+        items: cart.items,
+        cartId: cart.id,
+      };
+    }
+    return {
+      cartId: cart.id,
+      items: cart.items,
+      subtotal: cart.subtotal,
+      total: cart.total,
+      meta,
+    };
+  }
+
+  async function handle(request, response) {
+    const parsedUrl = new URL(request.url, 'http://127.0.0.1');
+    const parts = parsedUrl.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+    const method = request.method;
+
+    if (method === 'GET' && parsedUrl.pathname === '/health') {
+      await delayFor('health');
+      return sendJson(response, 200, { ok: true, variant: fixture }, fixture);
+    }
+
 
   });
 }
