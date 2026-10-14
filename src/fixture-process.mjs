@@ -138,6 +138,34 @@ export function spawnFixture(fixture, {
           timeoutMs: Math.max(1, timeout - (Date.now() - started)),
           signal,
         });
+      } catch (error) {
+        if (error instanceof HttpJsonError && error.code === 'RUN_CANCELLED') {
+          throw new FixtureStartError('RUN_CANCELLED', 'Run was cancelled during fixture health check', {
+            fixture,
+          });
+        }
+        if (error instanceof HttpJsonError && error.code === 'REQUEST_TIMEOUT') {
+          throw new FixtureStartError('STARTUP_TIMEOUT', `Fixture health check timed out within ${timeout} ms`, {
+            fixture,
+            timeoutMs: timeout,
+            cause: error,
+          });
+        }
+        throw new FixtureStartError('STARTUP_FAILURE', 'Fixture health check failed', {
+          fixture,
+          cause: error,
+          stderr,
+        });
+      }
+      return { baseUrl, port, pid: child.pid };
+    } catch (error) {
+      clearTimeout(timer);
+      child.removeListener('exit', onExit);
+      signal?.removeEventListener('abort', onAbort);
+      if (error instanceof FixtureStartError) throw error;
+      throw new FixtureStartError('STARTUP_FAILURE', error.message, { fixture, cause: error, stderr });
+    }
+  }
 
   return {};
 }
