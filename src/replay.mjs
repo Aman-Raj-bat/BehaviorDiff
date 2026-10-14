@@ -119,9 +119,6 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
       throw error;
     }
     for (const [side, result] of settled) {
-      if (result.error && typeof services?.[side]?.waitForExit === 'function') {
-        await services[side].waitForExit();
-      }
       sideData[side].result = result;
     }
 
@@ -243,6 +240,34 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
         regression = true;
         steps.push(entry);
         break;
+      }
+      if (differences.length > 0) regression = true;
+    }
 
-  return {};
+    if (sideData.reference.captureError) {
+      reason = {
+        code: 'REFERENCE_CAPTURE_MISSING',
+        side: 'reference',
+        stepId: step.id,
+        pointer: sideData.reference.captureError.pointer,
+      };
+      steps.push(entry);
+      break;
+    }
+    if (sideData.candidate.captureError) {
+      reason = {
+        code: 'CANDIDATE_CAPTURE_MISSING',
+        side: 'candidate',
+        stepId: step.id,
+        pointer: sideData.candidate.captureError.pointer,
+      };
+      regression = true;
+      steps.push(entry);
+      break;
+    }
+
+    steps.push(entry);
+  }
+
+  return { steps, reason, regression };
 }
