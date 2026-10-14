@@ -83,6 +83,26 @@ function collectDifferences(reference, candidate, pointer, ignored, differences,
       collectDifferences(
         Object.hasOwn(reference, key) ? reference[key] : MISSING,
         Object.hasOwn(candidate, key) ? candidate[key] : MISSING,
+        pointerFor(pointer, key),
+        ignored,
+        differences,
+        ignoredDifferences,
+      );
+    }
+    return;
+  }
+
+  differences.push({
+    pointer,
+    reference,
+    candidate,
+  });
+}
+
+export function compareJson(reference, candidate, ignorePaths = []) {
+  for (const pointer of ignorePaths) assertJsonPointer(pointer);
+
+  const differences = [];
 
   return [];
 }
