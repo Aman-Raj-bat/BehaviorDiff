@@ -43,6 +43,26 @@ function collectDifferences(reference, candidate, pointer, ignored, differences,
   if (ignored.has(pointer)) {
     const nestedDifferences = [];
     collectDifferences(reference, candidate, pointer, new Set(), nestedDifferences, []);
+    ignoredDifferences.push(...nestedDifferences.map((difference) => ({
+      pointer: difference.pointer,
+      reference: difference.reference,
+      candidate: difference.candidate,
+    })));
+    return;
+  }
+
+  if (reference === MISSING || candidate === MISSING) {
+    differences.push({
+      pointer,
+      reference: comparableValue(reference),
+      candidate: comparableValue(candidate),
+    });
+    return;
+  }
+
+  if (Object.is(reference, candidate)) return;
+
+  if (Array.isArray(reference) && Array.isArray(candidate)) {
 
   return [];
 }
