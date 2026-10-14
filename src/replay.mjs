@@ -56,3 +56,50 @@ function statusDifference(reference, candidate) {
   return [{ pointer: '$status', reference: reference.status, candidate: candidate.status }];
 }
 
+export async function replayPair({ scenario, services, requestTimeoutMs, signal }) {
+  const contexts = {
+    reference: { ...scenario.variables },
+    candidate: { ...scenario.variables },
+  };
+  const steps = [];
+  let reason;
+  let regression = false;
+
+  for (const step of scenario.steps) {
+    if (signal?.aborted) {
+      const error = new Error('Run was cancelled');
+      error.code = 'RUN_CANCELLED';
+      throw error;
+    }
+    const entry = {
+      id: step.id,
+      expectedStatus: step.expect.status,
+      requestTemplate: step.request,
+      ignorePaths: step.ignorePaths ?? [],
+    };
+    const sideData = {};
+
+    for (const side of ['reference', 'candidate']) {
+      try {
+        const request = resolveRequest(step, contexts[side]);
+        sideData[side] = { request };
+      } catch (error) {
+        const wrapped = error instanceof ScenarioConfigError
+          ? error
+          : new ScenarioConfigError(error.message);
+        sideData[side] = { error: wrapped };
+        if (!reason) {
+          reason = {
+            code: side === 'candidate' ? 'CANDIDATE_CAPTURE_MISSING' : 'REFERENCE_CAPTURE_MISSING',
+            side,
+            stepId: step.id,
+            message: wrapped.message,
+          };
+          regression ||= side === 'candidate';
+        }
+      }
+    }
+
+
+  return {};
+}
