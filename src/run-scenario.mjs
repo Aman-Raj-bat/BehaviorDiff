@@ -198,6 +198,46 @@ export async function runScenario(scenarioPath, outputDirectory, options = {}) {
           acceptedOperations: 0,
           originalScenario: scenario,
           originalMismatchSignature: initial.execution.signature,
+          scenario,
+          execution: initial.execution,
+          finalMismatchSignature: initial.execution.signature,
+          attempts: [],
+        };
+      evidence.reduction = {
+        algorithm: 'greedy-step-delete+scalar-v1',
+        status: reduction.status,
+        originalScenarioFile: 'scenario.original.json',
+        finalScenarioFile: 'scenario.replay.json',
+        maxAttempts,
+        attemptsUsed: reduction.attemptsUsed,
+        actualReplays: reduction.actualReplays,
+        attemptLimitReached: reduction.attemptLimitReached,
+        minimalUnderOperations: reduction.minimalUnderOperations,
+        acceptedOperations: reduction.acceptedOperations,
+        originalStepCount: scenario.steps.length,
+        finalStepCount: reduction.scenario.steps.length,
+        originalScenario: scenario,
+        originalMismatchSignature: initial.execution.signature,
+        finalScenario: reduction.scenario,
+        finalMismatchSignature: reduction.finalMismatchSignature,
+        attempts: reduction.attempts,
+      };
+      finalScenario = reduction.scenario;
+      finalExecution = reduction.execution;
+    }
+
+    evidence.steps = finalExecution.steps;
+    if (finalExecution.reason) evidence.reason = finalExecution.reason;
+    if (finalExecution.reason && !finalExecution.regression) {
+      evidence.outcome = 'INCONCLUSIVE';
+      evidence.exitCode = 2;
+    } else if (finalExecution.regression) {
+      evidence.outcome = 'REGRESSION';
+      evidence.exitCode = 1;
+    } else {
+      evidence.outcome = 'PASS';
+      evidence.exitCode = 0;
+    }
 
   return {};
 }
