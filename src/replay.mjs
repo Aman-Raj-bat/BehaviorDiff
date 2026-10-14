@@ -213,6 +213,36 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
       const bodyComparison = compareJson(referenceResponse.body, candidateResponse.body, entry.ignorePaths);
       const differences = [
         ...statusDifference(referenceResponse, candidateResponse),
+        ...bodyComparison.differences,
+      ];
+      entry.comparison = {
+        equal: differences.length === 0,
+        differences,
+        ignoredPaths: entry.ignorePaths,
+        ignoredDifferences: bodyComparison.ignoredDifferences,
+      };
+      if (referenceResponse.status !== step.expect.status) {
+        reason = {
+          code: 'REFERENCE_UNEXPECTED_STATUS',
+          side: 'reference',
+          stepId: step.id,
+          expected: step.expect.status,
+          actual: referenceResponse.status,
+        };
+        steps.push(entry);
+        break;
+      }
+      if (candidateResponse.status !== step.expect.status) {
+        reason = {
+          code: 'CANDIDATE_UNEXPECTED_STATUS',
+          side: 'candidate',
+          stepId: step.id,
+          expected: step.expect.status,
+          actual: candidateResponse.status,
+        };
+        regression = true;
+        steps.push(entry);
+        break;
 
   return {};
 }
