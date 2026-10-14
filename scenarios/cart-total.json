@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "name": "cart quantity contributes to total",
+  "seed": 1,
+  "services": {
+    "reference": "old-cart",
+    "candidate": "candidate-cart"
+  },
+  "variables": {
+    "sku": "coffee",
+    "quantity": 2,
+    "unitPrice": 10
+  },
+  "steps": [
+    {
+      "id": "create-cart",
+      "request": {
+        "method": "POST",
+        "path": "/carts",
+        "body": {}
+      },
+      "expect": {
+        "status": 201
+      },
+      "capture": {
+        "cartId": "/cartId"
+      },
+      "ignorePaths": [
+        "/cartId",
+        "/meta/requestId"
+      ]
+    },
+    {
+      "id": "add-item",
+      "request": {
+        "method": "POST",
+        "path": "/carts/{{cartId}}/items",
+        "body": {
+          "sku": {
+            "$var": "sku"
+          },
+          "quantity": {
+            "$var": "quantity"
+          },
+          "unitPrice": {
+            "$var": "unitPrice"
+          }
+        }
+      },
+      "expect": {
+        "status": 200
+      },
+      "ignorePaths": [
+        "/cartId",
+        "/meta/requestId"
+      ]
+    },
+    {
+      "id": "read-cart",
+      "request": {
+        "method": "GET",
+        "path": "/carts/{{cartId}}"
+      },
+      "expect": {
+        "status": 200
+      },
+      "ignorePaths": [
+        "/cartId",
+        "/meta/requestId"
+      ]
+    }
+  ]
+}
