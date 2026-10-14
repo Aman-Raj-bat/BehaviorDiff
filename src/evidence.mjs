@@ -18,5 +18,10 @@ export async function writeReplayArtifacts(outputDirectory, scenario, evidence, 
     path.join(outputDirectory, 'scenario.replay.json'),
     `${JSON.stringify(scenario, null, 2)}\n`,
     'utf8',
-
+  );
+  await writeFile(
+    path.join(outputDirectory, 'evidence.json'),
+    `${JSON.stringify(evidence, null, 2)}\n`,
+    'utf8',
+  );
 }
