@@ -28,3 +28,31 @@ function errorRecord(error, diagnostics = {}) {
   };
 }
 
+function responseRecord(response) {
+  return {
+    status: response.status,
+    headers: response.headers,
+    body: response.body,
+    durationMs: response.durationMs,
+  };
+}
+
+function sideRecord(request, response, error, captures, captureError, diagnostics) {
+  return {
+    ...(request === undefined ? {} : { request }),
+    ...(response === undefined ? {} : { response: responseRecord(response) }),
+    ...(error === undefined ? {} : { error: errorRecord(error, diagnostics) }),
+    captures,
+    ...(captureError === undefined ? {} : { captureError }),
+  };
+}
+
+function isReferenceBlocking(error) {
+  return error && (error.code === 'REQUEST_TIMEOUT' || error.code === 'TRANSPORT_ERROR' || error.code === 'NON_JSON_RESPONSE');
+}
+
+function statusDifference(reference, candidate) {
+  if (reference.status === candidate.status) return [];
+  return [{ pointer: '$status', reference: reference.status, candidate: candidate.status }];
+}
+
