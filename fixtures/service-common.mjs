@@ -173,6 +173,26 @@ export function createCartService({ fixture, variant }) {
 
     if (parts.length === 2 && parts[0] === 'carts' && method === 'GET') {
       await delayFor('read-cart');
+      const cart = carts.get(parts[1]);
+      if (!cart) return sendJson(response, 404, { error: 'cart not found' }, fixture);
+      return sendJson(response, 200, cartRepresentation(cart), fixture);
+    }
+
+    sendJson(response, 404, { error: 'not found' }, fixture);
+  }
+
+  async function start(port = 0) {
+    if (process.env.BEHAVIOR_DIFF_FAIL_STARTUP === '1') {
+      throw new Error('fixture startup failure requested by the test harness');
+    }
+    if (startupDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, startupDelayMs));
+    server = http.createServer((request, response) => {
+      handle(request, response).catch(() => {
+        if (!response.headersSent) sendJson(response, 500, { error: 'fixture failure' }, fixture);
+        else response.destroy();
+      });
+    });
+    await new Promise((resolve, reject) => {
 
   });
 }
