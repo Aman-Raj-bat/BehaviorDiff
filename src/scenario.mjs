@@ -144,5 +144,25 @@ function resolveValue(value, variables, label) {
   return value;
 }
 
+function configScalar(value, label) {
+  if (value === null || (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean')) {
+    throw new ScenarioConfigError(`${label} must be scalar when embedded in a path`);
+  }
+}
+
+export function resolveRequest(step, variables) {
+  const resolvedPath = resolveValue(step.request.path, variables, `${step.id}.request.path`);
+  configScalar(resolvedPath, `${step.id}.request.path`);
+  const request = { method: step.request.method, path: String(resolvedPath) };
+  if (Object.hasOwn(step.request, 'body')) request.body = resolveValue(step.request.body, variables, `${step.id}.request.body`);
   return request;
+}
+
+export function captureValues(step, body, variables) {
+  const captures = {};
+  for (const [name, pointer] of Object.entries(step.capture ?? {})) {
+    const parts = pointer.slice(1).split('/').map((part) => part.replaceAll('~1', '/').replaceAll('~0', '~'));
+    let current = body;
+
+  return {};
 }
