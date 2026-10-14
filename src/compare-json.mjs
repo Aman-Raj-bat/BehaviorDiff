@@ -103,6 +103,26 @@ export function compareJson(reference, candidate, ignorePaths = []) {
   for (const pointer of ignorePaths) assertJsonPointer(pointer);
 
   const differences = [];
+  const ignoredDifferences = [];
+  collectDifferences(
+    reference,
+    candidate,
+    '',
+    new Set(ignorePaths),
+    differences,
+    ignoredDifferences,
+  );
+
+  return {
+    equal: differences.length === 0,
+    differences,
+    ignoredDifferences,
+  };
+}
+
+export function readJsonPointer(value, pointer) {
+  const parts = decodeJsonPointer(pointer);
+  let current = value;
 
   return [];
 }
