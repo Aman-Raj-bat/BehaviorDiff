@@ -28,5 +28,35 @@ function readJson(request) {
     request.on('end', () => {
       if (settled) return;
       if (text.length === 0) {
+        settled = true;
+        return resolve({});
+      }
+      try {
+        const parsed = JSON.parse(text);
+        settled = true;
+        resolve(parsed);
+      } catch {
+        fail(new Error('request body is not JSON'));
+      }
+    });
+    request.on('error', fail);
+  });
+}
+
+function sendJson(response, status, body, fixture) {
+  const text = JSON.stringify(body);
+  response.writeHead(status, {
+    'content-type': 'application/json',
+    'content-length': Buffer.byteLength(text),
+    'x-behavior-diff-fixture': fixture,
+  });
+  response.end(text);
+}
+
+function badRequest(response, message, fixture) {
+  sendJson(response, 400, { error: message }, fixture);
+}
+
+export function createCartService({ fixture, variant }) {
 
 }
