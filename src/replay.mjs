@@ -100,6 +100,29 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
       }
     }
 
+    const requests = {};
+    for (const side of ['reference', 'candidate']) {
+      if (sideData[side].request) requests[side] = requestJson({
+        baseUrl: services[side].baseUrl,
+        request: sideData[side].request,
+        timeoutMs: requestTimeoutMs,
+        signal,
+      }).then(
+        (response) => ({ response }),
+        (error) => ({ error }),
+      );
+    }
+    const settled = await Promise.all(Object.entries(requests).map(async ([side, promise]) => [side, await promise]));
+    if (signal?.aborted) {
+      const error = new Error('Run was cancelled');
+      error.code = 'RUN_CANCELLED';
+      throw error;
+    }
+    for (const [side, result] of settled) {
+      if (result.error && typeof services?.[side]?.waitForExit === 'function') {
+        await services[side].waitForExit();
+      }
+      sideData[side].result = result;
 
   return {};
 }
