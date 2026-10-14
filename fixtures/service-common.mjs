@@ -193,6 +193,18 @@ export function createCartService({ fixture, variant }) {
       });
     });
     await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(port, '127.0.0.1', resolve);
+    });
+    const address = server.address();
+    console.log(JSON.stringify({ type: 'ready', fixture, port: address.port }));
+  }
 
-  });
+  async function stop() {
+    if (!server) return;
+    await new Promise((resolve) => server.close(resolve));
+    server = undefined;
+  }
+
+  return { start, stop };
 }
