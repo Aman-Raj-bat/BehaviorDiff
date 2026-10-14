@@ -183,6 +183,20 @@ export function spawnFixture(fixture, {
     }
   }
 
+  async function reset(timeoutMs, signal) {
+    if (!baseUrl) throw new Error(`Fixture ${fixture} is not ready`);
+    const response = await requestJson({
+      baseUrl,
+      request: { method: 'POST', path: '/reset', body: {} },
+      timeoutMs,
+      signal,
+    });
+    if (response.status !== 200 || response.body?.ok !== true) {
+      throw new Error(`Fixture ${fixture} reset returned HTTP ${response.status}`);
+    }
+    return response;
+  }
+
 
   return {};
 }
