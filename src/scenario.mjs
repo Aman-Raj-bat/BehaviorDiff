@@ -163,6 +163,22 @@ export function captureValues(step, body, variables) {
   for (const [name, pointer] of Object.entries(step.capture ?? {})) {
     const parts = pointer.slice(1).split('/').map((part) => part.replaceAll('~1', '/').replaceAll('~0', '~'));
     let current = body;
-
-  return {};
+    for (const part of parts) {
+      if (Array.isArray(current)) {
+        if (!/^(0|[1-9]\d*)$/.test(part) || Number(part) >= current.length) current = undefined;
+        else current = current[Number(part)];
+      } else if (current !== null && typeof current === 'object' && Object.hasOwn(current, part)) {
+        current = current[part];
+      } else {
+        current = undefined;
+      }
+      if (current === undefined) break;
+    }
+    if (current === undefined) return { error: { name, pointer } };
+    variables[name] = current;
+    captures[name] = current;
+  }
+  return { captures };
 }
+
+export { FIXTURES };
