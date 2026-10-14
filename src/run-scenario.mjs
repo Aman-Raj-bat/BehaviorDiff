@@ -239,5 +239,33 @@ export async function runScenario(scenarioPath, outputDirectory, options = {}) {
       evidence.exitCode = 0;
     }
 
-  return {};
+    const differingStep = evidence.steps.find((step) => step.comparison?.differences?.length);
+    evidence.summary = {
+      comparedSteps: evidence.steps.filter((step) => step.comparison).length,
+      ...(differingStep ? {
+        firstDifference: {
+          stepId: differingStep.id,
+          pointer: differingStep.comparison.differences[0].pointer,
+          classification: finalExecution.signature?.classification,
+        },
+      } : {}),
+    };
+    return finalize(evidence, finalScenario, outputDirectory, startedAt, shrinkEnabled ? scenario : undefined);
+  } catch (error) {
+    if (error?.code !== 'RUN_CANCELLED') throw error;
+    evidence.outcome = 'INCONCLUSIVE';
+    evidence.exitCode = 2;
+    evidence.reason = { code: 'RUN_CANCELLED', message: 'Run was cancelled' };
+    return finalize(evidence, scenario, outputDirectory, startedAt);
+  } finally {
+    await Promise.all(Object.values(handles).map((handle) => handle.stop()));
+  }
+}
+
+async function finalize(evidence, scenario, outputDirectory, startedAt, originalScenario) {
+  const finishedAt = new Date();
+  evidence.run.finishedAt = finishedAt.toISOString();
+  evidence.run.durationMs = finishedAt.getTime() - startedAt.getTime();
+  await writeReplayArtifacts(outputDirectory, scenario, evidence, { originalScenario });
+  return evidence;
 }
