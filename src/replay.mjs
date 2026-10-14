@@ -183,6 +183,36 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
           ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
         };
         regression = true;
+      } else if (referenceError) {
+        reason = {
+          code: 'REFERENCE_REPLAY_ERROR',
+          side: 'reference',
+          stepId: step.id,
+          ...errorRecord(referenceError, diagnosticRecord(services, 'reference')),
+        };
+      } else {
+        reason = {
+          code: 'CANDIDATE_REPLAY_ERROR',
+          side: 'candidate',
+          stepId: step.id,
+          ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
+        };
+        regression = true;
+      }
+      steps.push(entry);
+      break;
+    }
+
+    const referenceResponse = sideData.reference.result?.response;
+    const candidateResponse = sideData.candidate.result?.response;
+    if (referenceResponse && candidateResponse) {
+      entry.expectation = {
+        reference: referenceResponse.status === step.expect.status,
+        candidate: candidateResponse.status === step.expect.status,
+      };
+      const bodyComparison = compareJson(referenceResponse.body, candidateResponse.body, entry.ignorePaths);
+      const differences = [
+        ...statusDifference(referenceResponse, candidateResponse),
 
   return {};
 }
