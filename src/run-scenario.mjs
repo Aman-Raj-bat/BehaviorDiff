@@ -118,6 +118,46 @@ export async function runScenario(scenarioPath, outputDirectory, options = {}) {
   const signal = options.signal;
   const rawScenario = await readFile(scenarioPath, 'utf8');
   const scenario = validateScenario(JSON.parse(rawScenario));
+  await mkdir(outputDirectory, { recursive: true });
+  const scenarioHash = createHash('sha256').update(rawScenario).digest('hex');
+
+  const evidence = {
+    schemaVersion: shrinkEnabled ? 2 : 1,
+    outcome: 'INCONCLUSIVE',
+    exitCode: 2,
+    run: { runId: nowRunId(), startedAt: startedAt.toISOString() },
+    scenario: { name: scenario.name, version: scenario.version, sha256: scenarioHash },
+    services: {},
+    steps: [],
+    summary: {},
+    replay: {
+      scenarioFile: 'scenario.replay.json',
+      command: `node bin/behavior-diff.mjs run ${shellQuote(path.relative(process.cwd(), path.join(outputDirectory, 'scenario.replay.json')) || 'scenario.replay.json')} --out ${shellQuote(path.relative(process.cwd(), path.join(outputDirectory, 'replay')) || 'replay')}`,
+    },
+  };
+
+  const handles = {};
+  let runtimeReason;
+  try {
+    for (const side of ['reference', 'candidate']) {
+      const fixtureOptions = options.fixtureOptions?.[side] ?? {};
+      handles[side] = spawnFixture(scenario.services[side], fixtureOptions);
+    }
+
+    const starts = await Promise.allSettled([
+      handles.reference.start(startupTimeoutMs, signal),
+      handles.candidate.start(startupTimeoutMs, signal),
+    ]);
+    const sides = ['reference', 'candidate'];
+    for (const [index, result] of starts.entries()) {
+      const side = sides[index];
+      if (result.status === 'fulfilled') {
+        evidence.services[side] = serviceEvidence(scenario.services[side], handles[side], true);
+      } else {
+        const error = result.reason instanceof FixtureStartError
+          ? result.reason
+          : new FixtureStartError('STARTUP_FAILURE', result.reason.message);
+        evidence.services[side] = serviceEvidence(scenario.services[side], handles[side], false);
 
   return {};
 }
