@@ -103,6 +103,41 @@ export function spawnFixture(fixture, {
           }
         } catch {
           // A fixture that writes non-protocol output is not ready yet.
+        }
+      }
+    };
+    child.stdout.on('data', inspectOutput);
+    const onExit = () => readyReject(new FixtureStartError('STARTUP_FAILURE', 'Fixture exited before readiness', {
+      fixture,
+      exitCode: child.exitCode,
+      signal: child.signalCode,
+      stderr,
+    }));
+    const onAbort = () => readyReject(new FixtureStartError('RUN_CANCELLED', 'Run was cancelled while waiting for fixture readiness', {
+      fixture,
+    }));
+    signal?.addEventListener('abort', onAbort, { once: true });
+    child.once('exit', onExit);
+    const timer = setTimeout(() => readyReject(new FixtureStartError('STARTUP_TIMEOUT', `Fixture did not become ready within ${timeout} ms`, {
+      fixture,
+      timeoutMs: timeout,
+      stderr,
+    })), timeout);
+    if (signal?.aborted) onAbort();
+
+    try {
+      const message = await ready;
+      clearTimeout(timer);
+      child.removeListener('exit', onExit);
+      port = message.port;
+      baseUrl = `http://127.0.0.1:${port}/`;
+      try {
+        await requestJson({
+          baseUrl,
+          request: { method: 'GET', path: '/health' },
+          timeoutMs: Math.max(1, timeout - (Date.now() - started)),
+          signal,
+        });
 
   return {};
 }
