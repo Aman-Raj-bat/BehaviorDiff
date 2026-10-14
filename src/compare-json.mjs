@@ -123,6 +123,15 @@ export function compareJson(reference, candidate, ignorePaths = []) {
 export function readJsonPointer(value, pointer) {
   const parts = decodeJsonPointer(pointer);
   let current = value;
-
-  return [];
+  for (const part of parts) {
+    if (Array.isArray(current)) {
+      if (!/^(0|[1-9]\d*)$/.test(part) || Number(part) >= current.length) return undefined;
+      current = current[Number(part)];
+    } else if (isObject(current) && Object.hasOwn(current, part)) {
+      current = current[part];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
 }
