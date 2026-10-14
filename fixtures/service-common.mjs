@@ -148,6 +148,31 @@ export function createCartService({ fixture, variant }) {
       if (!cart) return sendJson(response, 404, { error: 'cart not found' }, fixture);
       let body;
       try {
+        body = await readJson(request);
+      } catch {
+        return badRequest(response, 'body must be JSON', fixture);
+      }
+      if (typeof body?.sku !== 'string' || !Number.isInteger(body.quantity) || body.quantity <= 0 || typeof body.unitPrice !== 'number') {
+        return badRequest(response, 'sku, positive quantity, and numeric unitPrice are required', fixture);
+      }
+      if (variant === 'candidate' && crashOnQuantity !== undefined && body.quantity === crashOnQuantity) process.exit(1);
+      await delayFor('add-item', body);
+      const alternateMismatch = variant === 'candidate' && alternateMismatchSku !== undefined && body.sku === alternateMismatchSku;
+      const lineTotal = variant === 'candidate' && !alternateMismatch ? body.unitPrice : body.quantity * body.unitPrice;
+      const item = {
+        sku: body.sku,
+        quantity: body.quantity,
+        unitPrice: body.unitPrice,
+        lineTotal,
+      };
+      cart.items.push(item);
+      cart.subtotal += lineTotal + (alternateMismatch ? 1 : 0);
+      cart.total = cart.subtotal;
+      return sendJson(response, 200, cartRepresentation(cart), fixture);
+    }
+
+    if (parts.length === 2 && parts[0] === 'carts' && method === 'GET') {
+      await delayFor('read-cart');
 
   });
 }
