@@ -29,7 +29,6 @@ function validateDelay(value, label) {
   return value;
 }
 
-function waitForExit(child) {
   if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
   return new Promise((resolve) => child.once('exit', resolve));
 }
@@ -173,13 +172,11 @@ export function spawnFixture(fixture, {
     if (child.exitCode === null && child.signalCode === null) {
       child.kill('SIGTERM');
       await Promise.race([
-        waitForExit(child),
         new Promise((resolve) => setTimeout(resolve, 1_000)),
       ]);
     }
     if (child.exitCode === null && child.signalCode === null) {
       child.kill('SIGKILL');
-      await waitForExit(child);
     }
   }
 
@@ -197,6 +194,25 @@ export function spawnFixture(fixture, {
     return response;
   }
 
-
-  return {};
+  return {
+    fixture,
+    pid: child.pid,
+    start,
+    reset,
+    stop,
+      if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+      return new Promise((resolve) => {
+        const timer = setTimeout(resolve, timeoutMs);
+        child.once('exit', () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+    },
+    get baseUrl() { return baseUrl; },
+    get port() { return port; },
+    get stderr() { return stderr; },
+    get exitCode() { return child.exitCode; },
+    get signalCode() { return child.signalCode; },
+  };
 }
