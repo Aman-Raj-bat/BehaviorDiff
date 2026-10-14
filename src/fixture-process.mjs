@@ -167,5 +167,22 @@ export function spawnFixture(fixture, {
     }
   }
 
+  async function stop() {
+    if (stopped) return;
+    stopped = true;
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill('SIGTERM');
+      await Promise.race([
+        waitForExit(child),
+        new Promise((resolve) => setTimeout(resolve, 1_000)),
+      ]);
+    }
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill('SIGKILL');
+      await waitForExit(child);
+    }
+  }
+
+
   return {};
 }
