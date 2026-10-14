@@ -58,5 +58,36 @@ function badRequest(response, message, fixture) {
 }
 
 export function createCartService({ fixture, variant }) {
+  const carts = new Map();
+  const startupDelayMs = integerEnv('BEHAVIOR_DIFF_STARTUP_DELAY_MS');
+  const responseDelayMs = integerEnv('BEHAVIOR_DIFF_RESPONSE_DELAY_MS');
+  const responseDelayStep = process.env.BEHAVIOR_DIFF_RESPONSE_DELAY_STEP ?? '';
+  const crashOnQuantity = process.env.BEHAVIOR_DIFF_CRASH_ON_QUANTITY === undefined
+    ? undefined
+    : integerEnv('BEHAVIOR_DIFF_CRASH_ON_QUANTITY');
+  const timeoutOnQuantity = process.env.BEHAVIOR_DIFF_TIMEOUT_ON_QUANTITY === undefined
+    ? undefined
+    : integerEnv('BEHAVIOR_DIFF_TIMEOUT_ON_QUANTITY');
+  const alternateMismatchSku = process.env.BEHAVIOR_DIFF_ALTERNATE_MISMATCH_SKU;
+  let requestCount = 0;
+  let cartCount = 0;
+  let server;
 
+  async function delayFor(stepName, body) {
+    const quantitySpecific = stepName === 'add-item' && timeoutOnQuantity !== undefined;
+    if (responseDelayMs > 0 && (!responseDelayStep || responseDelayStep === stepName) && (!quantitySpecific || body?.quantity === timeoutOnQuantity)) {
+      await new Promise((resolve) => setTimeout(resolve, responseDelayMs));
+    }
+    if (stepName === 'add-item' && timeoutOnQuantity !== undefined && body?.quantity === timeoutOnQuantity) {
+      await new Promise((resolve) => setTimeout(resolve, responseDelayMs));
+    }
+  }
+
+  function requestId() {
+    requestCount += 1;
+    return `${fixture}-${requestCount}`;
+  }
+
+
+  });
 }
