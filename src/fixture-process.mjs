@@ -34,4 +34,40 @@ function waitForExit(child) {
   return new Promise((resolve) => child.once('exit', resolve));
 }
 
+export function spawnFixture(fixture, {
+  startupDelayMs,
+  responseDelayMs,
+  responseDelayStep,
+  startupFailure,
+  crashOnQuantity,
+  timeoutOnQuantity,
+  alternateMismatchSku,
+} = {}) {
+  const script = SCRIPTS[fixture];
+  if (!script) throw new Error(`Unknown fixture ${fixture}`);
+  const startupDelay = validateDelay(startupDelayMs, 'startupDelayMs');
+  const responseDelay = validateDelay(responseDelayMs, 'responseDelayMs');
+  const crashQuantity = crashOnQuantity === undefined ? undefined : validateDelay(crashOnQuantity, 'crashOnQuantity');
+  const timeoutQuantity = timeoutOnQuantity === undefined ? undefined : validateDelay(timeoutOnQuantity, 'timeoutOnQuantity');
+  if (responseDelayStep !== undefined && !ALLOWED_DELAY_STEPS.has(responseDelayStep)) {
+    throw new Error(`responseDelayStep is not allowed: ${responseDelayStep}`);
+  }
+
+  const environment = { ...process.env };
+  if (startupDelay) environment.BEHAVIOR_DIFF_STARTUP_DELAY_MS = String(startupDelay);
+  if (responseDelay) environment.BEHAVIOR_DIFF_RESPONSE_DELAY_MS = String(responseDelay);
+  if (responseDelayStep) environment.BEHAVIOR_DIFF_RESPONSE_DELAY_STEP = responseDelayStep;
+  if (startupFailure) environment.BEHAVIOR_DIFF_FAIL_STARTUP = '1';
+  if (crashQuantity !== undefined) environment.BEHAVIOR_DIFF_CRASH_ON_QUANTITY = String(crashQuantity);
+  if (timeoutQuantity !== undefined) environment.BEHAVIOR_DIFF_TIMEOUT_ON_QUANTITY = String(timeoutQuantity);
+  if (alternateMismatchSku !== undefined) environment.BEHAVIOR_DIFF_ALTERNATE_MISMATCH_SKU = alternateMismatchSku;
+
+  const child = spawn(process.execPath, [script], {
+    cwd: ROOT,
+    env: environment,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+  });
+
+  return {};
 }
