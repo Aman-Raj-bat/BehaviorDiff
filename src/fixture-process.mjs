@@ -68,6 +68,41 @@ export function spawnFixture(fixture, {
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   });
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+
+  let stdout = '';
+  let stderr = '';
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+
+  let stopped = false;
+  let baseUrl;
+  let port;
+
+  async function start(startupTimeoutMs, signal) {
+    const timeout = validateDelay(startupTimeoutMs, 'startupTimeoutMs');
+    const started = Date.now();
+    let readyResolve;
+    let readyReject;
+    const ready = new Promise((resolve, reject) => {
+      readyResolve = resolve;
+      readyReject = reject;
+    });
+    let consumed = 0;
+    const inspectOutput = () => {
+      const lines = stdout.slice(consumed).split('\n');
+      consumed += lines.slice(0, -1).join('\n').length + (lines.length > 1 ? 1 : 0);
+      for (const line of lines.slice(0, -1)) {
+        if (!line.trim()) continue;
+        try {
+          const message = JSON.parse(line);
+          if (message.type === 'ready' && Number.isInteger(message.port)) {
+            readyResolve(message);
+            return;
+          }
+        } catch {
+          // A fixture that writes non-protocol output is not ready yet.
 
   return {};
 }
