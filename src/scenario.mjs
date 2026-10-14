@@ -103,6 +103,26 @@ function validateSteps(steps, staticVariables) {
   }
 }
 
-
+export function validateScenario(scenario) {
+  config(isRecord(scenario), 'scenario must be a JSON object');
+  config(scenario.version === 1, 'scenario.version must be 1');
+  config(typeof scenario.name === 'string' && scenario.name.length > 0, 'scenario.name is required');
+  if (Object.hasOwn(scenario, 'seed')) config(Number.isInteger(scenario.seed) && scenario.seed >= 0, 'scenario.seed must be a non-negative integer');
+  config(isRecord(scenario.services), 'scenario.services is required');
+  for (const side of ['reference', 'candidate']) {
+    config(FIXTURES.has(scenario.services[side]), `scenario.services.${side} is not an allowed fixture`);
+  }
+  const variables = scenario.variables ?? {};
+  config(isRecord(variables), 'scenario.variables must be an object');
+  for (const name of Object.keys(variables)) validateVariableName(name, `scenario.variables.${name}`);
+  validateSteps(scenario.steps, variables);
   return scenario;
+}
+
+function resolveValue(value, variables, label) {
+  if (typeof value === 'string') {
+    const exact = value.match(/^\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}$/);
+    if (exact) {
+
+  return request;
 }
