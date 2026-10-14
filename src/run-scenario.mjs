@@ -158,6 +158,46 @@ export async function runScenario(scenarioPath, outputDirectory, options = {}) {
           ? result.reason
           : new FixtureStartError('STARTUP_FAILURE', result.reason.message);
         evidence.services[side] = serviceEvidence(scenario.services[side], handles[side], false);
+        if (!runtimeReason) runtimeReason = startupReason(side, error);
+      }
+    }
+
+    if (runtimeReason) {
+      evidence.reason = runtimeReason;
+      return finalize(evidence, scenario, outputDirectory, startedAt);
+    }
+
+    const initial = await executeReplay(scenario, handles, requestTimeoutMs, signal);
+    for (const side of ['reference', 'candidate']) evidence.services[side].reset = initial.reset[side];
+    if (initial.reason) {
+      runtimeReason = initial.reason;
+      evidence.reason = runtimeReason;
+      return finalize(evidence, scenario, outputDirectory, startedAt);
+    }
+
+    let finalScenario = scenario;
+    let finalExecution = initial.execution;
+    if (shrinkEnabled) {
+      const baselineCanShrink = initial.execution.outcome === 'REGRESSION'
+        && initial.execution.signature
+        && (!initial.execution.reason || initial.execution.reason.code === 'CANDIDATE_UNEXPECTED_STATUS');
+      const reduction = baselineCanShrink
+        ? await shrinkScenario({
+          scenario,
+          baseline: initial.execution,
+          maxAttempts,
+           evaluate: (candidate) => executeReplay(candidate, handles, requestTimeoutMs, signal),
+        })
+        : {
+          status: 'BASELINE_NOT_REPRODUCING',
+          maxAttempts,
+          attemptsUsed: 1,
+          actualReplays: 1,
+          attemptLimitReached: false,
+          minimalUnderOperations: false,
+          acceptedOperations: 0,
+          originalScenario: scenario,
+          originalMismatchSignature: initial.execution.signature,
 
   return {};
 }
