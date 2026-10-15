@@ -509,3 +509,43 @@ test('recorded replay commands quote artifact paths safely', async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('HTTP adapter rejects redirects and oversized request bodies before remote access', async () => {
+  const target = http.createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ reached: true }));
+  });
+  const redirect = http.createServer((_request, response) => {
+    const address = target.address();
+    response.writeHead(302, { location: `http://127.0.0.1:${address.port}/secret` });
+    response.end();
+  });
+  await Promise.all([
+    new Promise((resolve) => target.listen(0, '127.0.0.1', resolve)),
+    new Promise((resolve) => redirect.listen(0, '127.0.0.1', resolve)),
+  ]);
+  try {
+    const redirectAddress = redirect.address();
+    await assert.rejects(
+      requestJson({
+        baseUrl: `http://127.0.0.1:${redirectAddress.port}/`,
+        request: { method: 'GET', path: '/' },
+        timeoutMs: 500,
+      }),
+      (error) => error.code === 'TRANSPORT_ERROR',
+    );
+    await assert.rejects(
+      requestJson({
+        baseUrl: `http://127.0.0.1:${redirectAddress.port}/`,
+        request: { method: 'POST', path: '/', body: { value: 'x'.repeat(1_000_001) } },
+        timeoutMs: 500,
+      }),
+      (error) => error.code === 'CONFIG_ERROR' && /exceeds/.test(error.message),
+    );
+  } finally {
+    await Promise.all([
+      new Promise((resolve) => redirect.close(resolve)),
+      new Promise((resolve) => target.close(resolve)),
+    ]);
+  }
+});
