@@ -98,6 +98,36 @@ async function evaluateCandidate({ candidate, operation, location, metadata, sta
   try {
     validateScenario(candidate);
   } catch (error) {
+    attempt.result = 'REJECTED';
+    attempt.replayed = false;
+    attempt.reason = 'CONFIG_ERROR';
+    attempt.error = error.message;
+    state.attempts.push(attempt);
+    return { accepted: false };
+  }
+
+  let evaluated;
+  try {
+    evaluated = await evaluate(candidate);
+  } catch (error) {
+    evaluated = {
+      replayed: false,
+      fatal: true,
+      reason: { code: 'EVALUATION_ERROR', message: error.message },
+    };
+  }
+  attempt.replayed = evaluated.replayed === true;
+  if (attempt.replayed) state.actualReplays += 1;
+  if (evaluated.reset) attempt.reset = evaluated.reset;
+  if (evaluated.execution) {
+    attempt.execution = {
+      outcome: evaluated.execution.outcome,
+      reason: evaluated.execution.reason,
+      signature: evaluated.execution.signature,
+      steps: evaluated.execution.steps,
+    };
+  }
+
 
   return {};
 }
