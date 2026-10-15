@@ -283,3 +283,21 @@ test('shrink attempt limits return the verified best scenario without claiming m
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('shrinking a passing baseline stays PASS without claiming a reduction', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-shrink-pass-'));
+  try {
+    const evidence = await runScenario(PASS_SCENARIO, path.join(directory, 'run'), {
+      shrink: { maxAttempts: 100 },
+    });
+    assert.equal(evidence.outcome, 'PASS');
+    assert.equal(evidence.reduction.status, 'BASELINE_NOT_REPRODUCING');
+    assert.equal(evidence.reduction.attemptsUsed, 1);
+    assert.equal(evidence.reduction.actualReplays, 1);
+    assert.deepEqual(evidence.reduction.attempts, []);
+    assert.equal(evidence.reduction.minimalUnderOperations, false);
+    assert.equal(evidence.reduction.finalScenario.steps.length, 3);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
