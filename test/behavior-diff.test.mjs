@@ -354,3 +354,30 @@ test('an unrelated mismatch signature is rejected even when the candidate still 
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('request timeout is inconclusive and retains paired partial evidence', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-timeout-'));
+  try {
+    const output = path.join(directory, 'run');
+    const evidence = await runScenario(REGRESSION_SCENARIO, output, {
+      requestTimeoutMs: 20,
+      fixtureOptions: {
+        candidate: { responseDelayMs: 100, responseDelayStep: 'add-item' },
+      },
+    });
+    assert.equal(evidence.outcome, 'INCONCLUSIVE');
+    assert.equal(evidence.exitCode, 2);
+    assert.equal(evidence.reason.code, 'REQUEST_TIMEOUT');
+    assert.equal(evidence.reason.side, 'candidate');
+    assert.equal(evidence.reason.stepId, 'add-item');
+    const addItem = evidence.steps.find((step) => step.id === 'add-item');
+    assert.equal(addItem.reference.response.body.total, 20);
+    assert.equal(addItem.candidate.error.code, 'REQUEST_TIMEOUT');
+    assert.equal(evidence.services.reference.ready, true);
+    assert.equal(evidence.services.candidate.ready, true);
+    assertProcessStopped(evidence.services.reference.pid);
+    assertProcessStopped(evidence.services.candidate.pid);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
