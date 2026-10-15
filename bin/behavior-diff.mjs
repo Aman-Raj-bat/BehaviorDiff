@@ -93,5 +93,18 @@ try {
     process.removeListener('SIGINT', onSignal);
     process.removeListener('SIGTERM', onSignal);
   };
-
+  const evidence = await runScenario(parsed.scenarioPath, parsed.outputDirectory, {
+    ...parsed.options,
+    signal: controller.signal,
+  });
+  printResult(evidence, parsed.outputDirectory);
+  process.exitCode = parsed.command === 'shrink'
+    ? (evidence.reduction?.status === 'COMPLETED' || evidence.reduction?.status === 'LIMIT_REACHED' ? 0 : 2)
+    : evidence.exitCode;
+} catch (error) {
+  const prefix = error instanceof ScenarioConfigError || error instanceof SyntaxError ? 'CONFIG_ERROR' : 'ERROR';
+  console.error(`${prefix}: ${error.message}`);
+  process.exitCode = 3;
+} finally {
+  removeSignalHandlers();
 }
