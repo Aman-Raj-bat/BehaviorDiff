@@ -438,3 +438,28 @@ test('a crashed fixture aborts shrinking and cannot be accepted as a reproductio
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('startup timeout is inconclusive and writes replay artifacts', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-startup-'));
+  try {
+    const output = path.join(directory, 'run');
+    const evidence = await runScenario(REGRESSION_SCENARIO, output, {
+      startupTimeoutMs: 500,
+      fixtureOptions: {
+        reference: { startupDelayMs: 1_000 },
+      },
+    });
+    assert.equal(evidence.outcome, 'INCONCLUSIVE');
+    assert.equal(evidence.exitCode, 2);
+    assert.equal(evidence.reason.code, 'STARTUP_TIMEOUT');
+    assert.equal(evidence.reason.side, 'reference');
+    assert.deepEqual(evidence.steps, []);
+    assert.equal(evidence.services.reference.ready, false);
+    assert.equal(evidence.services.candidate.ready, true);
+    assertProcessStopped(evidence.services.reference.pid);
+    assertProcessStopped(evidence.services.candidate.pid);
+    assert.match(await readFile(path.join(output, 'scenario.replay.json'), 'utf8'), /cart quantity contributes/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
