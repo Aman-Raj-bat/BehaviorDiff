@@ -195,3 +195,21 @@ test('semantic comparison passes with explicitly ignored volatile fields and dif
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('reference protocol failures remain inconclusive even when bodies also differ', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-reference-protocol-'));
+  try {
+    const scenario = JSON.parse(await readFile(REGRESSION_SCENARIO, 'utf8'));
+    scenario.steps.find((step) => step.id === 'add-item').expect.status = 201;
+    const scenarioPath = path.join(directory, 'reference-protocol.json');
+    await writeFile(scenarioPath, JSON.stringify(scenario), 'utf8');
+    const evidence = await runScenario(scenarioPath, path.join(directory, 'run'));
+    assert.equal(evidence.outcome, 'INCONCLUSIVE');
+    assert.equal(evidence.exitCode, 2);
+    assert.equal(evidence.reason.code, 'REFERENCE_UNEXPECTED_STATUS');
+    assert.equal(evidence.reason.side, 'reference');
+    assert.equal(evidence.steps.find((step) => step.id === 'add-item').comparison.differences.length > 0, true);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
