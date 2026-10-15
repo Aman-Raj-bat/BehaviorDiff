@@ -188,6 +188,36 @@ export async function shrinkScenario({ scenario, baseline, maxAttempts, evaluate
 
     if (!state.aborted && state.attemptsUsed < state.maxAttempts) {
       let scalarChanged = true;
+      while (scalarChanged && !state.aborted && state.attemptsUsed < state.maxAttempts) {
+        scalarChanged = false;
+        for (const candidateChange of scalarCandidates(current)) {
+          if (state.attemptsUsed >= state.maxAttempts || state.aborted) break;
+          const result = await evaluateCandidate({
+            candidate: candidateChange.scenario,
+            operation: candidateChange.operation,
+            location: candidateChange.location,
+            metadata: candidateChange.metadata,
+            state,
+            evaluate,
+          });
+          if (result.limited || state.aborted) break;
+          if (result.accepted) {
+            current = candidateChange.scenario;
+            finalExecution = result.execution;
+            acceptedOperations += 1;
+            scalarChanged = true;
+            overallChanged = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  const attemptLimitReached = state.attemptsUsed >= state.maxAttempts;
+  return {
+    scenario: current,
+    execution: finalExecution,
 
   return {};
 }
