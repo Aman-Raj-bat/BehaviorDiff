@@ -158,6 +158,36 @@ export async function shrinkScenario({ scenario, baseline, maxAttempts, evaluate
 
   let overallChanged = true;
   while (overallChanged && !state.aborted && state.attemptsUsed < state.maxAttempts) {
+    overallChanged = false;
+    let changed = true;
+    while (changed && !state.aborted && state.attemptsUsed < state.maxAttempts) {
+      changed = false;
+      for (let index = 0; index < current.steps.length; index += 1) {
+        if (state.attemptsUsed >= state.maxAttempts || state.aborted) break;
+        const removedStepId = current.steps[index]?.id ?? `index-${index}`;
+        const candidate = removeStep(current, index);
+        const result = await evaluateCandidate({
+          candidate,
+          operation: 'REMOVE_STEP',
+          location: `/steps/${index}`,
+          state,
+          evaluate,
+        });
+        if (result.limited || state.aborted) break;
+        if (result.accepted) {
+          current = candidate;
+          finalExecution = result.execution;
+          acceptedOperations += 1;
+          changed = true;
+          overallChanged = true;
+          break;
+        }
+        state.attempts[state.attempts.length - 1].removedStepId = removedStepId;
+      }
+    }
+
+    if (!state.aborted && state.attemptsUsed < state.maxAttempts) {
+      let scalarChanged = true;
 
   return {};
 }
