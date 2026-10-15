@@ -178,6 +178,56 @@ async function scenarioCatalog(root) {
       reference: scenario.services.reference,
       candidate: scenario.services.candidate,
       stepCount: scenario.steps.length,
+    };
+  }));
+}
+
+async function listRuns(outputRoot) {
+  await mkdir(outputRoot, { recursive: true });
+  const entries = await readdir(outputRoot, { withFileTypes: true });
+  const runs = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !RUN_ID.test(entry.name)) continue;
+    try {
+      const model = await modelFromDirectory(
+        artifactDirectory(outputRoot, entry.name),
+        entry.name,
+        `/api/runs/${entry.name}`,
+      );
+      runs.push({
+        runId: model.runId,
+        outcome: model.outcome,
+        scenarioName: model.scenario.name,
+        minimizedStepCount: model.counts.minimizedStepCount,
+        mismatch: model.mismatch,
+        startedAt: model.run.startedAt ?? null,
+      });
+    } catch {
+      // An incomplete artifact directory is not exposed as a run.
+    }
+  }
+  return runs.sort((left, right) => String(right.startedAt).localeCompare(String(left.startedAt)));
+}
+
+async function runTrustedScenario({ root, outputRoot, request, signal }) {
+  const scenarioPath = scenarioPathFor(request.scenario, root);
+  const runId = newRunId(request.mode);
+  const directory = artifactDirectory(outputRoot, runId);
+  await mkdir(outputRoot, { recursive: true });
+  const evidence = await runScenario(scenarioPath, directory, {
+    ...(request.startupTimeoutMs === undefined ? {} : { startupTimeoutMs: request.startupTimeoutMs }),
+    ...(request.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: request.requestTimeoutMs }),
+    ...(signal ? { signal } : {}),
+    shrink: request.mode === 'shrink' ? { maxAttempts: request.maxAttempts ?? 100 } : false,
+  });
+  return buildWorkbenchModel(evidence, {
+    scenario: await readJsonFile(path.join(directory, 'scenario.replay.json'), 'minimized scenario'),
+    originalScenario: request.mode === 'shrink'
+      ? await readJsonFile(path.join(directory, 'scenario.original.json'), 'original scenario')
+      : null,
+    runId,
+    artifactBase: `/api/runs/${runId}`,
+  });
 
   return {};
 }
