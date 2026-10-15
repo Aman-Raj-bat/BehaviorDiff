@@ -78,5 +78,20 @@ function printResult(evidence, outputDirectory) {
     console.log(`reference=${JSON.stringify(difference.reference)}`);
     console.log(`candidate=${JSON.stringify(difference.candidate)}`);
   }
+  if (evidence.reason) console.log(`reason=${evidence.reason.code}`);
+  console.log(`evidence=${path.join(outputDirectory, 'evidence.json')}`);
+}
+
+let removeSignalHandlers = () => {};
+try {
+  const parsed = parseArguments(process.argv.slice(2));
+  const controller = new AbortController();
+  const onSignal = () => controller.abort();
+  process.once('SIGINT', onSignal);
+  process.once('SIGTERM', onSignal);
+  removeSignalHandlers = () => {
+    process.removeListener('SIGINT', onSignal);
+    process.removeListener('SIGTERM', onSignal);
+  };
 
 }
