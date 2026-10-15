@@ -213,3 +213,24 @@ test('reference protocol failures remain inconclusive even when bodies also diff
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('identical shrink inputs produce deterministic decisions and final scenarios', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-deterministic-shrink-'));
+  try {
+    const first = await runScenario(NOISY_SCENARIO, path.join(directory, 'first'), {
+      shrink: { maxAttempts: 100 },
+    });
+    const second = await runScenario(NOISY_SCENARIO, path.join(directory, 'second'), {
+      shrink: { maxAttempts: 100 },
+    });
+    assert.deepEqual(reductionShape(first), reductionShape(second));
+    assert.deepEqual(first.reduction.finalScenario, second.reduction.finalScenario);
+    assert.equal(first.reduction.actualReplays, second.reduction.actualReplays);
+    assertProcessStopped(first.services.reference.pid);
+    assertProcessStopped(first.services.candidate.pid);
+    assertProcessStopped(second.services.reference.pid);
+    assertProcessStopped(second.services.candidate.pid);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
