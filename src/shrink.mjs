@@ -23,6 +23,31 @@ export function summarizeReplay(replayResult) {
     outcome,
     steps: replayResult.steps,
     reason: replayResult.reason,
+    regression: replayResult.regression,
+    signature,
+  };
+}
+
+function sameSignature(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function canTrustCandidate(execution, target) {
+  if (execution.outcome !== 'REGRESSION' || !sameSignature(execution.signature, target)) return false;
+  return !execution.reason || execution.reason.code === 'CANDIDATE_UNEXPECTED_STATUS';
+}
+
+function candidateHash(scenario) {
+  return createHash('sha256').update(JSON.stringify(scenario)).digest('hex');
+}
+
+function clone(value) {
+  return structuredClone(value);
+}
+
+function encodePointerPart(value) {
+  return String(value).replaceAll('~', '~0').replaceAll('/', '~1');
+}
 
   return {};
 }
