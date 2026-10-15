@@ -12,5 +12,6 @@
   },
   "bin": {
     "behavior-diff": "bin/behavior-diff.mjs"
-  }
+  },
+  "_commitIndex": 108
 }
