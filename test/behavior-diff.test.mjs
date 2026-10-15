@@ -498,3 +498,14 @@ test('reusing an output directory clears stale shrink-only artifacts', async () 
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('recorded replay commands quote artifact paths safely', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff command $(safe)-'));
+  try {
+    const evidence = await runScenario(REGRESSION_SCENARIO, path.join(directory, 'run folder'));
+    assert.match(evidence.replay.command, /'[^']*run folder[^']*'/);
+    assert.match(evidence.replay.command, /'[^']*\$\(safe\)[^']*'/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
