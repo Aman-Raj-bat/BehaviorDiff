@@ -418,6 +418,39 @@ export function createWorkbenchServer({
       const status = error instanceof WorkbenchRequestError || error instanceof WorkbenchEvidenceError
         ? error.status ?? 422
         : error instanceof ScenarioConfigError ? 422 : 500;
+      if (status === 500) console.error(error);
+      jsonResponse(response, status, {
+        error: status === 500 ? 'workbench request failed' : error instanceof Error ? error.message : 'workbench request failed',
+      });
+    }
+  });
+  server.requestTimeout = 10_000;
+  server.headersTimeout = 10_000;
+  server.keepAliveTimeout = 5_000;
 
-  return {};
+  return {
+    server,
+    async listen({ port = 4173, host = '127.0.0.1' } = {}) {
+      if (host !== '127.0.0.1' && host !== '::1') throw new WorkbenchRequestError('workbench must bind to loopback');
+      await new Promise((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(port, host, resolve);
+      });
+      const address = server.address();
+      const displayHost = host.includes(':') ? `[${host}]` : host;
+      return {
+        host,
+        port: typeof address === 'object' && address ? address.port : port,
+        url: `http://${displayHost}:${typeof address === 'object' && address ? address.port : port}/`,
+      };
+    },
+    async close() {
+      for (const controller of activeControllers) controller.abort();
+      await Promise.allSettled([...activeTasks]);
+      if (!server.listening) return;
+      await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    },
+  };
 }
+
+export { ROOT, SCENARIOS };
