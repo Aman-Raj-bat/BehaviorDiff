@@ -153,6 +153,46 @@ function reductionView(reduction) {
       : scenarioStepCount(reduction.finalScenario),
     originalMismatchSignature: signatureView(reduction.originalMismatchSignature),
     finalMismatchSignature: signatureView(reduction.finalMismatchSignature),
+    attempts: Array.isArray(reduction.attempts) ? reduction.attempts.map(attemptView).filter(Boolean) : [],
+    attemptsAvailable: Array.isArray(reduction.attempts),
+  };
+}
+
+function jsonText(value) {
+  return value === undefined || value === null ? null : JSON.stringify(value, null, 2);
+}
+
+export function buildWorkbenchModel(evidenceInput, {
+  scenario = null,
+  originalScenario = null,
+  runId = null,
+  artifactBase = null,
+} = {}) {
+  const evidence = parseEvidence(evidenceInput);
+  const reduction = reductionView(evidence.reduction);
+  const finalScenario = scenario ?? evidence.reduction?.finalScenario ?? null;
+  const initialScenario = originalScenario ?? evidence.reduction?.originalScenario ?? null;
+  const mismatch = firstMismatch(evidence);
+
+  return {
+    runId: optionalString(runId),
+    outcome: evidence.outcome,
+    exitCode: isInteger(evidence.exitCode) ? evidence.exitCode : null,
+    run: isRecord(evidence.run) ? copy(evidence.run) : {},
+    scenario: {
+      name: optionalString(evidence.scenario?.name) ?? optionalString(finalScenario?.name),
+      version: isInteger(evidence.scenario?.version) ? evidence.scenario.version : null,
+      sha256: optionalString(evidence.scenario?.sha256),
+    },
+    services: {
+      reference: serviceView(evidence.services?.reference),
+      candidate: serviceView(evidence.services?.candidate),
+    },
+    counts: {
+      originalStepCount: reduction?.originalStepCount ?? scenarioStepCount(initialScenario),
+      minimizedStepCount: reduction?.finalStepCount ?? scenarioStepCount(finalScenario),
+      attemptsUsed: reduction?.attemptsUsed ?? null,
+      actualReplays: reduction?.actualReplays ?? null,
 
   return {};
 }
