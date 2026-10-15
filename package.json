@@ -6,5 +6,11 @@
   "type": "module",
   "engines": {
     "node": ">=22.0.0 <23"
+  },
+  "scripts": {
+    "test": "node --test test/behavior-diff.test.mjs"
+  },
+  "bin": {
+    "behavior-diff": "bin/behavior-diff.mjs"
   }
 }
