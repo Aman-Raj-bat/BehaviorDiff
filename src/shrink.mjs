@@ -248,6 +248,31 @@ function removeAtPath(scenario, path) {
   return candidate;
 }
 
+function scalarAlternatives(value) {
+  if (Number.isInteger(value) && value > 0) return [1, 0].filter((candidate) => candidate !== value);
+  if (typeof value === 'string' && value.length > 0 && !value.includes('{{')) {
+    return [...new Set([value.slice(0, 1), ''])].filter((candidate) => candidate !== value);
+  }
+  return [];
+}
+
+function walkScalarValues(scenario, value, path, candidates) {
+  for (const alternative of scalarAlternatives(value)) {
+    candidates.push({
+      scenario: replaceAtPath(scenario, path, alternative),
+      operation: 'SIMPLIFY_SCALAR',
+      location: pointerFor(path),
+      metadata: { from: value, to: alternative },
+    });
+  }
+
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      candidates.push({
+        scenario: removeAtPath(scenario, [...path, index]),
+        operation: 'SIMPLIFY_ARRAY',
+        location: pointerFor([...path, index]),
+        metadata: { removed: value[index] },
 
   return {};
 }
