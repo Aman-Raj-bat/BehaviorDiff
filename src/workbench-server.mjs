@@ -278,6 +278,56 @@ async function runRequestJob(request, response, runJob, task, activeControllers)
   const controller = new AbortController();
   const abort = () => controller.abort();
   request.once('aborted', abort);
+  response.once('close', () => {
+    if (!response.writableEnded) controller.abort();
+  });
+  activeControllers.add(controller);
+  try {
+    return await runJob(() => task(controller.signal));
+  } finally {
+    activeControllers.delete(controller);
+    request.removeListener('aborted', abort);
+  }
+}
+
+export function createWorkbenchServer({
+  root = ROOT,
+  outputRoot = path.join(root, 'artifacts', 'workbench'),
+  maxConcurrentJobs = 1,
+} = {}) {
+  if (!Number.isInteger(maxConcurrentJobs) || maxConcurrentJobs < 1) {
+    throw new WorkbenchRequestError('maxConcurrentJobs must be a positive integer');
+  }
+  let activeJobs = 0;
+  const activeControllers = new Set();
+  const activeTasks = new Set();
+  async function runJob(task) {
+    if (activeJobs >= maxConcurrentJobs) {
+      throw new WorkbenchRequestError('another workbench run is already in progress', 429);
+    }
+    activeJobs += 1;
+    let taskPromise;
+    try {
+      taskPromise = task();
+      activeTasks.add(taskPromise);
+      return await taskPromise;
+    } finally {
+      if (taskPromise) activeTasks.delete(taskPromise);
+      activeJobs -= 1;
+    }
+  }
+
+  const server = createServer(async (request, response) => {
+    try {
+      const url = new URL(request.url, 'http://127.0.0.1');
+      if (request.method === 'GET' && STATIC_FILES[url.pathname]) {
+        const [relativePath, contentType] = STATIC_FILES[url.pathname];
+        const raw = await readFile(path.join(root, relativePath), 'utf8');
+        textResponse(response, 200, raw, contentType);
+        return;
+      }
+
+      if (url.pathname === '/api/scenarios' && request.method === 'GET') {
 
   return {};
 }
