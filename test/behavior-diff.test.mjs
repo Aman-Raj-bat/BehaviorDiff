@@ -381,3 +381,33 @@ test('request timeout is inconclusive and retains paired partial evidence', asyn
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('timeouts are rejected as reductions and never accepted as the target mismatch', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-shrink-timeout-'));
+  try {
+    const evidence = await runScenario(NOISY_SCENARIO, path.join(directory, 'run'), {
+      requestTimeoutMs: 20,
+      shrink: { maxAttempts: 100 },
+      fixtureOptions: {
+        candidate: {
+          timeoutOnQuantity: 1,
+          responseDelayMs: 100,
+          responseDelayStep: 'add-item',
+        },
+      },
+    });
+    const timeoutAttempt = evidence.reduction.attempts.find(
+      (attempt) => attempt.execution?.reason?.code === 'REQUEST_TIMEOUT',
+    );
+    assert.ok(timeoutAttempt);
+    assert.equal(timeoutAttempt.result, 'REJECTED');
+    assert.equal(timeoutAttempt.reason, 'INCONCLUSIVE_REPLAY');
+    assert.equal(timeoutAttempt.rejectionDetail.code, 'REQUEST_TIMEOUT');
+    assert.equal(evidence.reduction.attempts.some((attempt) => attempt.execution?.reason?.code === 'REQUEST_TIMEOUT' && attempt.result === 'ACCEPTED'), false);
+    assert.deepEqual(evidence.reduction.finalMismatchSignature, evidence.reduction.originalMismatchSignature);
+    assertProcessStopped(evidence.services.reference.pid);
+    assertProcessStopped(evidence.services.candidate.pid);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
