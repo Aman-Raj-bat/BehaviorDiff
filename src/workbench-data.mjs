@@ -193,6 +193,41 @@ export function buildWorkbenchModel(evidenceInput, {
       minimizedStepCount: reduction?.finalStepCount ?? scenarioStepCount(finalScenario),
       attemptsUsed: reduction?.attemptsUsed ?? null,
       actualReplays: reduction?.actualReplays ?? null,
+      acceptedOperations: reduction?.acceptedOperations ?? null,
+    },
+    mismatch,
+    reason: isRecord(evidence.reason) ? copy(evidence.reason) : null,
+    steps: Array.isArray(evidence.steps) ? copy(evidence.steps) : [],
+    reduction,
+    replay: {
+      command: optionalString(evidence.replay?.command),
+      scenarioFile: optionalString(evidence.replay?.scenarioFile),
+    },
+    scenarios: {
+      original: copy(initialScenario) ?? null,
+      minimized: copy(finalScenario) ?? null,
+    },
+    artifacts: artifactBase ? {
+      evidence: `${artifactBase}/evidence`,
+      minimizedScenario: `${artifactBase}/scenario`,
+      originalScenario: initialScenario ? `${artifactBase}/original-scenario` : null,
+    } : null,
+    raw: copy(evidence),
+    copyPayloads: {
+      scenario: jsonText(finalScenario),
+      replayCommand: optionalString(evidence.replay?.command),
+      mismatch: mismatch ? JSON.stringify(mismatch, null, 2) : null,
+    },
+  };
+}
 
-  return {};
+export function evidenceSummary(evidenceInput, options = {}) {
+  const model = buildWorkbenchModel(evidenceInput, options);
+  return {
+    runId: model.runId,
+    outcome: model.outcome,
+    scenarioName: model.scenario.name,
+    minimizedStepCount: model.counts.minimizedStepCount,
+    mismatch: model.mismatch,
+  };
 }
