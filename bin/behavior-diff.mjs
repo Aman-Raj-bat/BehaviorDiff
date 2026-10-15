@@ -58,5 +58,25 @@ function printResult(evidence, outputDirectory) {
       console.log(`step=${evidence.reduction.finalMismatchSignature.stepId}`);
       console.log(`pointer=${evidence.reduction.finalMismatchSignature.pointer}`);
       console.log(`classification=${evidence.reduction.finalMismatchSignature.classification}`);
+    }
+    console.log(`attempts=${evidence.reduction.attemptsUsed}/${evidence.reduction.maxAttempts}`);
+    console.log(`originalSteps=${evidence.reduction.originalScenario.steps.length}`);
+    console.log(`finalSteps=${evidence.reduction.finalScenario.steps.length}`);
+    console.log(`minimalUnderOperations=${evidence.reduction.minimalUnderOperations}`);
+    console.log(`attemptLimitReached=${evidence.reduction.attemptLimitReached}`);
+    console.log(`scenario=${path.join(outputDirectory, 'scenario.replay.json')}`);
+    console.log(`evidence=${path.join(outputDirectory, 'evidence.json')}`);
+    return;
+  }
+  console.log(evidence.outcome);
+  if (evidence.summary.firstDifference) {
+    const { stepId, pointer } = evidence.summary.firstDifference;
+    const step = evidence.steps.find((item) => item.id === stepId);
+    const difference = step.comparison.differences[0];
+    console.log(`step=${stepId}`);
+    console.log(`pointer=${pointer}`);
+    console.log(`reference=${JSON.stringify(difference.reference)}`);
+    console.log(`candidate=${JSON.stringify(difference.candidate)}`);
+  }
 
 }
