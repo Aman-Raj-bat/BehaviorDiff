@@ -113,3 +113,63 @@ test('real paired replay detects the candidate business regression and exports e
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('noisy stateful scenarios shrink through real replays and preserve the target signature', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-shrink-'));
+  try {
+    const output = path.join(directory, 'shrink');
+    const evidence = await runScenario(NOISY_SCENARIO, output, {
+      shrink: { maxAttempts: 100 },
+    });
+    assert.equal(evidence.outcome, 'REGRESSION');
+    assert.equal(evidence.reduction.status, 'COMPLETED');
+    assert.equal(evidence.reduction.originalScenario.steps.length, 6);
+    assert.equal(evidence.reduction.finalScenario.steps.length, 2);
+    assert.deepEqual(evidence.reduction.finalScenario.steps.map((step) => step.id), [
+      'create-cart',
+      'add-item',
+    ]);
+    assert.deepEqual(evidence.reduction.originalMismatchSignature, {
+      stepId: 'add-item',
+      pointer: '/items/0/lineTotal',
+      classification: 'BUSINESS_DIFFERENCE',
+    });
+    assert.deepEqual(evidence.reduction.finalMismatchSignature, evidence.reduction.originalMismatchSignature);
+    assert.equal(evidence.reduction.attemptLimitReached, false);
+    assert.equal(evidence.reduction.minimalUnderOperations, true);
+    assert.match(await readFile(path.join(output, 'scenario.original.json'), 'utf8'), /noise-health-before/);
+    assert.match(await readFile(path.join(output, 'scenario.replay.json'), 'utf8'), /"id": "add-item"/);
+    assert.equal(evidence.reduction.attemptsUsed, evidence.reduction.attempts.length + 1);
+    assert.equal(
+      evidence.reduction.actualReplays,
+      evidence.reduction.attempts.filter((attempt) => attempt.replayed).length + 1,
+    );
+    for (const attempt of evidence.reduction.attempts.filter((item) => item.replayed)) {
+      assert.deepEqual(attempt.reset, { reference: true, candidate: true });
+    }
+    assert.equal(evidence.reduction.attempts.some((attempt) => attempt.result === 'ACCEPTED'), true);
+    assert.equal(evidence.reduction.attempts.some((attempt) => attempt.result === 'ACCEPTED' && attempt.operation === 'SIMPLIFY_ARRAY'), true);
+    assert.equal(evidence.reduction.attempts.some((attempt) => attempt.result === 'ACCEPTED' && attempt.operation === 'SIMPLIFY_OBJECT'), true);
+    assert.equal(evidence.reduction.attempts.some((attempt) => attempt.reason === 'CONFIG_ERROR'), true);
+    const invalidCaptureRemoval = evidence.reduction.attempts.find(
+      (attempt) => attempt.removedStepId === 'create-cart',
+    );
+    assert.equal(invalidCaptureRemoval.reason, 'CONFIG_ERROR');
+    assert.match(invalidCaptureRemoval.error, /unknown variable cartId/);
+    assert.equal(evidence.reduction.attempts.some((attempt) => attempt.reason === 'MISMATCH_NOT_REPRODUCED'), true);
+    assertProcessStopped(evidence.services.reference.pid);
+    assertProcessStopped(evidence.services.candidate.pid);
+
+    const replayOutput = path.join(directory, 'replay');
+    const replay = await runCli(['run', path.join(output, 'scenario.replay.json'), '--out', replayOutput]);
+    assert.equal(replay.code, 1, replay.stderr);
+    const replayEvidence = await readEvidence(replayOutput);
+    assert.deepEqual(replayEvidence.summary.firstDifference, {
+      stepId: 'add-item',
+      pointer: '/items/0/lineTotal',
+      classification: 'BUSINESS_DIFFERENCE',
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
