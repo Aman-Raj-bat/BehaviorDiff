@@ -228,6 +228,56 @@ async function runTrustedScenario({ root, outputRoot, request, signal }) {
     runId,
     artifactBase: `/api/runs/${runId}`,
   });
+}
+
+async function replayTrustedScenario({ outputRoot, runId, signal }) {
+  const sourceDirectory = artifactDirectory(outputRoot, runId);
+  const sourceScenario = await readJsonFile(path.join(sourceDirectory, 'scenario.replay.json'), 'minimized scenario');
+  try {
+    validateScenario(sourceScenario);
+  } catch (error) {
+    throw new WorkbenchRequestError(`stored minimized scenario is invalid: ${error.message}`, 422);
+  }
+  const replayId = newRunId('replay');
+  const replayDirectory = artifactDirectory(path.join(sourceDirectory, 'replays'), replayId);
+  const evidence = await runScenario(
+    path.join(sourceDirectory, 'scenario.replay.json'),
+    replayDirectory,
+    { shrink: false, ...(signal ? { signal } : {}) },
+  );
+  return buildWorkbenchModel(evidence, {
+    scenario: await readJsonFile(path.join(replayDirectory, 'scenario.replay.json'), 'replay scenario'),
+    runId: `${runId}/${replayId}`,
+    artifactBase: `/api/runs/${runId}/replays/${replayId}`,
+  });
+}
+
+async function serveArtifact(response, filePath, label) {
+  const raw = await readFile(filePath, 'utf8').catch((error) => {
+    if (error.code === 'ENOENT') throw new WorkbenchRequestError(`${label} was not found`, 404);
+    throw error;
+  });
+  parseEvidence(raw, label);
+  textResponse(response, 200, raw, 'application/json; charset=utf-8');
+}
+
+const STATIC_FILES = Object.freeze({
+  '/': ['public/index.html', 'text/html; charset=utf-8'],
+  '/app.js': ['public/app.js', 'text/javascript; charset=utf-8'],
+  '/styles.css': ['public/styles.css', 'text/css; charset=utf-8'],
+});
+
+function parseRunPath(pathname) {
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length < 3 || parts[0] !== 'api' || parts[1] !== 'runs') return null;
+  if (!RUN_ID.test(parts[2])) throw new WorkbenchRequestError('invalid run identifier');
+  return parts.slice(2);
+}
+
+async function runRequestJob(request, response, runJob, task, activeControllers) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  request.once('aborted', abort);
 
   return {};
 }
