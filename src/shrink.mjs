@@ -73,6 +73,31 @@ function isFatalExecution(execution) {
 }
 
 function createAttempt({ number, operation, location, candidate, metadata = {} }) {
+  return {
+    attempt: number,
+    operation,
+    location,
+    candidateHash: candidateHash(candidate),
+    candidateStepCount: candidate.steps.length,
+    candidateScenario: clone(candidate),
+    ...metadata,
+  };
+}
+
+async function evaluateCandidate({ candidate, operation, location, metadata, state, evaluate }) {
+  if (state.attemptsUsed >= state.maxAttempts) return { limited: true };
+  state.attemptsUsed += 1;
+  const attempt = createAttempt({
+    number: state.attemptsUsed,
+    operation,
+    location,
+    candidate,
+    metadata,
+  });
+
+  try {
+    validateScenario(candidate);
+  } catch (error) {
 
   return {};
 }
