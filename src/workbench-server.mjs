@@ -328,6 +328,56 @@ export function createWorkbenchServer({
       }
 
       if (url.pathname === '/api/scenarios' && request.method === 'GET') {
+        jsonResponse(response, 200, { scenarios: await scenarioCatalog(root) });
+        return;
+      }
+
+      if (url.pathname === '/api/runs' && request.method === 'GET') {
+        jsonResponse(response, 200, { runs: await listRuns(outputRoot) });
+        return;
+      }
+
+      if (url.pathname === '/api/runs' && request.method === 'POST') {
+        const runRequest = validateRunRequest(await requestBody(request));
+        jsonResponse(response, 201, await runRequestJob(
+          request,
+          response,
+          runJob,
+          (signal) => runTrustedScenario({ root, outputRoot, request: runRequest, signal }),
+          activeControllers,
+        ));
+        return;
+      }
+
+      const runPath = parseRunPath(url.pathname);
+      if (runPath) {
+        if (runPath.length >= 3 && runPath[1] === 'replays') {
+          const [parentRunId, , replayId, action] = runPath;
+          if (!RUN_ID.test(replayId)) throw new WorkbenchRequestError('invalid replay identifier');
+          const replayRoot = path.join(artifactDirectory(outputRoot, parentRunId), 'replays');
+          const replayDirectory = artifactDirectory(replayRoot, replayId);
+          const replayModelId = `${parentRunId}/${replayId}`;
+          if (runPath.length === 3 && request.method === 'GET') {
+            jsonResponse(response, 200, await modelFromDirectory(
+              replayDirectory,
+              replayModelId,
+              `/api/runs/${parentRunId}/replays/${replayId}`,
+            ));
+            return;
+          }
+          if (runPath.length === 4 && request.method === 'GET') {
+            if (action === 'evidence') {
+              await serveArtifact(response, path.join(replayDirectory, 'evidence.json'), 'replay evidence');
+              return;
+            }
+            if (action === 'scenario') {
+              jsonResponse(response, 200, await readJsonFile(path.join(replayDirectory, 'scenario.replay.json'), 'replay scenario'));
+              return;
+            }
+          }
+        }
+        const [runId, action] = runPath;
+        const directory = artifactDirectory(outputRoot, runId);
 
   return {};
 }
