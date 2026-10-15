@@ -49,5 +49,30 @@ function encodePointerPart(value) {
   return String(value).replaceAll('~', '~0').replaceAll('/', '~1');
 }
 
+function pointerFor(parts) {
+  return `/${parts.map(encodePointerPart).join('/')}`;
+}
+
+function removeStep(scenario, index) {
+  const candidate = clone(scenario);
+  candidate.steps.splice(index, 1);
+  return candidate;
+}
+
+function rejectionFor(execution, target) {
+  if (!execution) return 'INCONCLUSIVE_REPLAY';
+  if (execution.outcome === 'INCONCLUSIVE') return 'INCONCLUSIVE_REPLAY';
+  if (execution.outcome !== 'REGRESSION') return 'MISMATCH_NOT_REPRODUCED';
+  if (!sameSignature(execution.signature, target)) return 'MISMATCH_SIGNATURE_CHANGED';
+  if (execution.reason) return 'INCONCLUSIVE_REPLAY';
+  return 'MISMATCH_NOT_REPRODUCED';
+}
+
+function isFatalExecution(execution) {
+  return execution?.reason?.code === 'TRANSPORT_ERROR' || execution?.reason?.code === 'REFERENCE_REPLAY_ERROR';
+}
+
+function createAttempt({ number, operation, location, candidate, metadata = {} }) {
+
   return {};
 }
