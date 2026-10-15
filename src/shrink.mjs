@@ -293,6 +293,14 @@ function walkScalarValues(scenario, value, path, candidates) {
 }
 
 function scalarCandidates(scenario) {
-
-  return {};
+  const candidates = [];
+  const variables = scenario.variables ?? {};
+  for (const key of Object.keys(variables).sort()) {
+    walkScalarValues(scenario, variables[key], ['variables', key], candidates);
+  }
+  for (let index = 0; index < scenario.steps.length; index += 1) {
+    if (!Object.hasOwn(scenario.steps[index].request, 'body')) continue;
+    walkScalarValues(scenario, scenario.steps[index].request.body, ['steps', index, 'request', 'body'], candidates);
+  }
+  return candidates;
 }
