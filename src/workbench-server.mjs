@@ -133,6 +133,51 @@ async function modelFromDirectory(directory, runId, artifactBase) {
     try {
       original = await readJsonFile(path.join(directory, 'scenario.original.json'), 'original scenario');
     } catch (error) {
+      if (!(error instanceof WorkbenchRequestError) || error.status !== 404) throw error;
+    }
+  }
+  return buildWorkbenchModel(evidence, {
+    scenario: minimized,
+    originalScenario: original,
+    runId,
+    artifactBase,
+  });
+}
+
+async function requestBody(request) {
+  const contentLength = Number(request.headers['content-length']);
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    request.resume();
+    throw new WorkbenchRequestError('request body is too large', 413);
+  }
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    size += chunk.length;
+    if (size > MAX_BODY_BYTES) {
+      request.resume();
+      throw new WorkbenchRequestError('request body is too large', 413);
+    }
+    chunks.push(chunk);
+  }
+  if (chunks.length === 0) return {};
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch (error) {
+    throw new WorkbenchRequestError(`request body is not valid JSON: ${error.message}`);
+  }
+}
+
+async function scenarioCatalog(root) {
+  return Promise.all(Object.entries(SCENARIOS).map(async ([id, filename]) => {
+    const scenario = validateScenario(await readJsonFile(path.join(root, 'scenarios', filename), filename));
+    return {
+      id,
+      filename,
+      name: scenario.name,
+      reference: scenario.services.reference,
+      candidate: scenario.services.candidate,
+      stepCount: scenario.steps.length,
 
   return {};
 }
