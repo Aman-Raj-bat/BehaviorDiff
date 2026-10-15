@@ -411,3 +411,30 @@ test('timeouts are rejected as reductions and never accepted as the target misma
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('a crashed fixture aborts shrinking and cannot be accepted as a reproduction', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-shrink-crash-'));
+  try {
+    const evidence = await runScenario(NOISY_SCENARIO, path.join(directory, 'run'), {
+      shrink: { maxAttempts: 100 },
+      fixtureOptions: {
+        candidate: { crashOnQuantity: 1 },
+      },
+    });
+    const crashAttempt = evidence.reduction.attempts.find(
+      (attempt) => attempt.execution?.reason?.code === 'TRANSPORT_ERROR',
+    );
+    assert.ok(crashAttempt);
+    assert.equal(crashAttempt.result, 'REJECTED');
+    assert.equal(evidence.reduction.status, 'ABORTED');
+    assert.equal(evidence.reduction.minimalUnderOperations, false);
+    assert.equal(evidence.reduction.attempts.some((attempt) => attempt.execution?.reason?.code === 'TRANSPORT_ERROR' && attempt.result === 'ACCEPTED'), false);
+    assert.deepEqual(evidence.reduction.finalMismatchSignature, evidence.reduction.originalMismatchSignature);
+    assert.equal(typeof crashAttempt.execution.steps.find((step) => step.id === 'add-item').candidate.error.diagnostics.pid, 'number');
+    assert.equal(crashAttempt.execution.steps.find((step) => step.id === 'add-item').candidate.error.diagnostics.exitCode, 1);
+    assertProcessStopped(evidence.services.reference.pid);
+    assertProcessStopped(evidence.services.candidate.pid);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
