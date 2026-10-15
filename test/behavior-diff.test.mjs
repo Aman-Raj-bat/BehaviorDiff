@@ -173,3 +173,25 @@ test('noisy stateful scenarios shrink through real replays and preserve the targ
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('semantic comparison passes with explicitly ignored volatile fields and different key order', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-pass-'));
+  try {
+    const output = path.join(directory, 'run');
+    const result = await runCli(['run', PASS_SCENARIO, '--out', output]);
+    assert.equal(result.code, 0, result.stderr);
+    const evidence = await readEvidence(output);
+    assert.equal(evidence.outcome, 'PASS');
+    assert.equal(evidence.steps.length, 3);
+    for (const step of evidence.steps) {
+      assert.deepEqual(step.comparison.differences, []);
+    }
+    assert.notEqual(
+      evidence.steps[0].reference.response.body.cartId,
+      evidence.steps[0].candidate.response.body.cartId,
+    );
+    assert.equal(evidence.steps[1].comparison.ignoredDifferences.length >= 2, true);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
