@@ -327,3 +327,30 @@ test('malformed or unsafe scenarios fail before any service is started', async (
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('an unrelated mismatch signature is rejected even when the candidate still regresses', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-signature-'));
+  try {
+    const evidence = await runScenario(NOISY_SCENARIO, path.join(directory, 'run'), {
+      shrink: { maxAttempts: 100 },
+      fixtureOptions: {
+        candidate: { alternateMismatchSku: 'c' },
+      },
+    });
+    assert.equal(evidence.reduction.status, 'COMPLETED');
+    const changed = evidence.reduction.attempts.find((attempt) => attempt.reason === 'MISMATCH_SIGNATURE_CHANGED');
+    assert.ok(changed);
+    assert.equal(changed.execution.signature.pointer, '/subtotal');
+    assert.equal(
+      evidence.reduction.attempts.some(
+        (attempt) => attempt.result === 'ACCEPTED' && attempt.execution.signature.pointer === '/subtotal',
+      ),
+      false,
+    );
+    assert.deepEqual(evidence.reduction.finalMismatchSignature, evidence.reduction.originalMismatchSignature);
+    assertProcessStopped(evidence.services.reference.pid);
+    assertProcessStopped(evidence.services.candidate.pid);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
