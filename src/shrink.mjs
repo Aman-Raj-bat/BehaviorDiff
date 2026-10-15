@@ -273,6 +273,26 @@ function walkScalarValues(scenario, value, path, candidates) {
         operation: 'SIMPLIFY_ARRAY',
         location: pointerFor([...path, index]),
         metadata: { removed: value[index] },
+      });
+      walkScalarValues(scenario, value[index], [...path, index], candidates);
+    }
+    return;
+  }
+
+  if (value === null || typeof value !== 'object') return;
+  if (Object.hasOwn(value, '$var')) return;
+  for (const key of Object.keys(value).sort()) {
+    candidates.push({
+      scenario: removeAtPath(scenario, [...path, key]),
+      operation: 'SIMPLIFY_OBJECT',
+      location: pointerFor([...path, key]),
+      metadata: { removedProperty: key },
+    });
+    walkScalarValues(scenario, value[key], [...path, key], candidates);
+  }
+}
+
+function scalarCandidates(scenario) {
 
   return {};
 }
