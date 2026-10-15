@@ -301,3 +301,29 @@ test('shrinking a passing baseline stays PASS without claiming a reduction', asy
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('malformed or unsafe scenarios fail before any service is started', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-config-'));
+  try {
+    const scenario = JSON.parse(await readFile(REGRESSION_SCENARIO, 'utf8'));
+    scenario.steps[0].request.path = '//example.invalid/should-not-be-fetched';
+    const scenarioPath = path.join(directory, 'unsafe.json');
+    await writeFile(scenarioPath, JSON.stringify(scenario), 'utf8');
+    const result = await runCli(['run', scenarioPath, '--out', path.join(directory, 'run')]);
+    assert.equal(result.code, 3);
+    assert.match(result.stderr, /CONFIG_ERROR/);
+
+    const getWithBody = JSON.parse(await readFile(REGRESSION_SCENARIO, 'utf8'));
+    getWithBody.steps[0].request.method = 'GET';
+    getWithBody.steps[0].request.body = {};
+    const getBodyPath = path.join(directory, 'get-body.json');
+    const getBodyOutput = path.join(directory, 'get-body-run');
+    await writeFile(getBodyPath, JSON.stringify(getWithBody), 'utf8');
+    const getBodyResult = await runCli(['run', getBodyPath, '--out', getBodyOutput]);
+    assert.equal(getBodyResult.code, 3);
+    assert.match(getBodyResult.stderr, /body is not allowed for GET/);
+    await assert.rejects(readFile(path.join(getBodyOutput, 'evidence.json')));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
