@@ -262,3 +262,24 @@ test('JSON Pointer escaping is exact and never applies broad normalization', () 
     candidate: false,
   }]);
 });
+
+test('shrink attempt limits return the verified best scenario without claiming minimality', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-shrink-limit-'));
+  try {
+    const evidence = await runScenario(NOISY_SCENARIO, path.join(directory, 'run'), {
+      shrink: { maxAttempts: 1 },
+    });
+    assert.equal(evidence.outcome, 'REGRESSION');
+    assert.equal(evidence.reduction.status, 'LIMIT_REACHED');
+    assert.equal(evidence.reduction.attemptsUsed, 1);
+    assert.equal(evidence.reduction.actualReplays, 1);
+    assert.deepEqual(evidence.reduction.attempts, []);
+    assert.equal(evidence.reduction.attemptLimitReached, true);
+    assert.equal(evidence.reduction.minimalUnderOperations, false);
+    assert.equal(evidence.reduction.finalScenario.steps.length, 6);
+    assertProcessStopped(evidence.services.reference.pid);
+    assertProcessStopped(evidence.services.candidate.pid);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
