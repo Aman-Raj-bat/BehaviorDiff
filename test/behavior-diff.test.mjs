@@ -234,3 +234,31 @@ test('identical shrink inputs produce deterministic decisions and final scenario
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('JSON Pointer escaping is exact and never applies broad normalization', () => {
+  const result = compareJson(
+    { 'a/b': 1, '~key': 2, keep: 3 },
+    { 'a/b': 9, '~key': 8, keep: 3 },
+    ['/a~1b', '/~0key'],
+  );
+  assert.equal(result.equal, true);
+  assert.deepEqual(result.differences, []);
+  assert.equal(result.ignoredDifferences.length, 2);
+
+  const equalIgnoredObject = compareJson(
+    { meta: { stable: true } },
+    { meta: { stable: true } },
+    ['/meta'],
+  );
+  assert.equal(equalIgnoredObject.ignoredDifferences.length, 0);
+  const unequalIgnoredObject = compareJson(
+    { meta: { stable: true } },
+    { meta: { stable: false } },
+    ['/meta'],
+  );
+  assert.deepEqual(unequalIgnoredObject.ignoredDifferences, [{
+    pointer: '/meta/stable',
+    reference: true,
+    candidate: false,
+  }]);
+});
