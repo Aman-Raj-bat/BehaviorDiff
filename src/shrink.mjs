@@ -218,6 +218,36 @@ export async function shrinkScenario({ scenario, baseline, maxAttempts, evaluate
   return {
     scenario: current,
     execution: finalExecution,
+    targetSignature: state.target,
+    finalMismatchSignature: finalExecution.signature,
+    attempts: state.attempts,
+    attemptsUsed: state.attemptsUsed,
+    actualReplays: state.actualReplays,
+    acceptedOperations,
+    attemptLimitReached,
+    minimalUnderOperations: !attemptLimitReached && !state.aborted,
+    status: state.aborted ? 'ABORTED' : attemptLimitReached ? 'LIMIT_REACHED' : 'COMPLETED',
+  };
+}
+
+function replaceAtPath(scenario, path, value) {
+  const candidate = clone(scenario);
+  let parent = candidate;
+  for (const part of path.slice(0, -1)) parent = parent[part];
+  parent[path.at(-1)] = value;
+  return candidate;
+}
+
+function removeAtPath(scenario, path) {
+  const candidate = clone(scenario);
+  let parent = candidate;
+  for (const part of path.slice(0, -1)) parent = parent[part];
+  const key = path.at(-1);
+  if (Array.isArray(parent)) parent.splice(Number(key), 1);
+  else delete parent[key];
+  return candidate;
+}
+
 
   return {};
 }
