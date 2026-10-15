@@ -88,6 +88,51 @@ export function scenarioPathFor(scenarioId, root = ROOT) {
   return scenarioPath;
 }
 
+export function validateRunRequest(body) {
+  if (!isRecord(body)) throw new WorkbenchRequestError('request body must be a JSON object');
+  const scenario = body.scenario;
+  const mode = body.mode ?? 'run';
+  if (typeof scenario !== 'string' || !Object.hasOwn(SCENARIOS, scenario)) {
+    throw new WorkbenchRequestError('scenario must be one of the checked-in scenarios');
+  }
+  if (mode !== 'run' && mode !== 'shrink') {
+    throw new WorkbenchRequestError('mode must be run or shrink');
+  }
+  const startupTimeoutMs = boundedInteger(body.startupTimeoutMs, 'startupTimeoutMs', 1, 60_000);
+  const requestTimeoutMs = boundedInteger(body.requestTimeoutMs, 'requestTimeoutMs', 1, 60_000);
+  const maxAttempts = boundedInteger(body.maxAttempts, 'maxAttempts', 1, 10_000);
+  if (mode === 'run' && maxAttempts !== undefined) {
+    throw new WorkbenchRequestError('maxAttempts is only valid in shrink mode');
+  }
+  return {
+    scenario,
+    mode,
+    ...(startupTimeoutMs === undefined ? {} : { startupTimeoutMs }),
+    ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
+    ...(maxAttempts === undefined ? {} : { maxAttempts }),
+  };
+}
+
+function newRunId(prefix = 'run') {
+  return `${prefix}-${Date.now().toString(36)}-${randomBytes(5).toString('hex')}`;
+}
+
+function artifactDirectory(outputRoot, runId) {
+  if (!RUN_ID.test(runId)) throw new WorkbenchRequestError('invalid run identifier');
+  const root = path.resolve(outputRoot);
+  const directory = path.resolve(root, runId);
+  if (!directory.startsWith(`${root}${path.sep}`)) throw new WorkbenchRequestError('invalid artifact path');
+  return directory;
+}
+
+async function modelFromDirectory(directory, runId, artifactBase) {
+  const evidence = parseEvidence(await readJsonFile(path.join(directory, 'evidence.json'), 'evidence'));
+  const minimized = await readJsonFile(path.join(directory, 'scenario.replay.json'), 'minimized scenario');
+  let original = null;
+  if (evidence.reduction) {
+    try {
+      original = await readJsonFile(path.join(directory, 'scenario.original.json'), 'original scenario');
+    } catch (error) {
 
   return {};
 }
