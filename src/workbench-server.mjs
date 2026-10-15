@@ -378,6 +378,46 @@ export function createWorkbenchServer({
         }
         const [runId, action] = runPath;
         const directory = artifactDirectory(outputRoot, runId);
+        if (runPath.length === 1 && request.method === 'GET') {
+          jsonResponse(response, 200, await modelFromDirectory(directory, runId, `/api/runs/${runId}`));
+          return;
+        }
+        if (runPath.length === 2 && request.method === 'GET') {
+          if (action === 'evidence') {
+            await serveArtifact(response, path.join(directory, 'evidence.json'), 'evidence');
+            return;
+          }
+          if (action === 'scenario') {
+            const scenario = await readJsonFile(path.join(directory, 'scenario.replay.json'), 'minimized scenario');
+            jsonResponse(response, 200, scenario);
+            return;
+          }
+          if (action === 'original-scenario') {
+            const evidence = parseEvidence(await readJsonFile(path.join(directory, 'evidence.json'), 'evidence'));
+            if (!evidence.reduction) throw new WorkbenchRequestError('original scenario is unavailable for a non-shrink run', 404);
+            const scenario = await readJsonFile(path.join(directory, 'scenario.original.json'), 'original scenario');
+            jsonResponse(response, 200, scenario);
+            return;
+          }
+        }
+        if (runPath.length === 2 && action === 'replay' && request.method === 'POST') {
+          await requestBody(request);
+          jsonResponse(response, 201, await runRequestJob(
+            request,
+            response,
+            runJob,
+            (signal) => replayTrustedScenario({ outputRoot, runId, signal }),
+            activeControllers,
+          ));
+          return;
+        }
+      }
+
+      throw new WorkbenchRequestError('not found', 404);
+    } catch (error) {
+      const status = error instanceof WorkbenchRequestError || error instanceof WorkbenchEvidenceError
+        ? error.status ?? 422
+        : error instanceof ScenarioConfigError ? 422 : 500;
 
   return {};
 }
