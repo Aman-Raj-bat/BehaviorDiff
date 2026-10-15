@@ -486,3 +486,15 @@ test('fixture startup failure is never reported as a successful comparison', asy
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('reusing an output directory clears stale shrink-only artifacts', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-reused-output-'));
+  const output = path.join(directory, 'run');
+  try {
+    await runScenario(NOISY_SCENARIO, output, { shrink: { maxAttempts: 1 } });
+    await runScenario(REGRESSION_SCENARIO, output);
+    await assert.rejects(readFile(path.join(output, 'scenario.original.json')));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
