@@ -128,6 +128,36 @@ async function evaluateCandidate({ candidate, operation, location, metadata, sta
     };
   }
 
+  if (evaluated.execution && canTrustCandidate(evaluated.execution, state.target)) {
+    attempt.result = 'ACCEPTED';
+    attempt.reason = 'TARGET_MISMATCH_REPRODUCED';
+    state.attempts.push(attempt);
+    return { accepted: true, execution: evaluated.execution };
+  }
+
+  attempt.result = 'REJECTED';
+  attempt.reason = evaluated.reason?.code ?? rejectionFor(evaluated.execution, state.target);
+  if (evaluated.execution?.reason) attempt.rejectionDetail = evaluated.execution.reason;
+  state.attempts.push(attempt);
+  if (evaluated.fatal || isFatalExecution(evaluated.execution)) state.aborted = true;
+  return { accepted: false, aborted: state.aborted };
+}
+
+export async function shrinkScenario({ scenario, baseline, maxAttempts, evaluate }) {
+  const state = {
+    maxAttempts,
+    attemptsUsed: 1,
+    actualReplays: 1,
+    attempts: [],
+    target: baseline.signature,
+    aborted: false,
+  };
+  let current = clone(scenario);
+  let finalExecution = baseline;
+  let acceptedOperations = 0;
+
+  let overallChanged = true;
+  while (overallChanged && !state.aborted && state.attemptsUsed < state.maxAttempts) {
 
   return {};
 }
