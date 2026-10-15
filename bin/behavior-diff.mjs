@@ -38,5 +38,25 @@ function parseArguments(argv) {
     } else if (flag === '--request-timeout-ms' && value) {
       options.requestTimeoutMs = parseInteger(value, flag);
       index += 1;
+    } else if (flag === '--max-attempts' && value) {
+      options.shrink = { maxAttempts: parseInteger(value, flag) };
+      index += 1;
+    } else {
+      throw new Error(`Unknown or incomplete option ${flag}\n\n${usage()}`);
+    }
+  }
+  if (!outputDirectory) throw new Error('--out is required');
+  if (command === 'shrink' && !options.shrink) options.shrink = true;
+  if (command === 'run' && options.shrink) throw new Error('--max-attempts is only valid with shrink');
+  return { command, scenarioPath, outputDirectory, options };
+}
+
+function printResult(evidence, outputDirectory) {
+  if (evidence.reduction) {
+    console.log(evidence.reduction.status === 'COMPLETED' || evidence.reduction.status === 'LIMIT_REACHED' ? 'SHRUNK' : 'SHRINK_INCONCLUSIVE');
+    if (evidence.reduction.finalMismatchSignature) {
+      console.log(`step=${evidence.reduction.finalMismatchSignature.stepId}`);
+      console.log(`pointer=${evidence.reduction.finalMismatchSignature.pointer}`);
+      console.log(`classification=${evidence.reduction.finalMismatchSignature.classification}`);
 
 }
