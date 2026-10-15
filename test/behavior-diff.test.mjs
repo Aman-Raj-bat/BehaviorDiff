@@ -463,3 +463,26 @@ test('startup timeout is inconclusive and writes replay artifacts', async () => 
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('fixture startup failure is never reported as a successful comparison', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-startup-failure-'));
+  try {
+    const output = path.join(directory, 'run');
+    const evidence = await runScenario(REGRESSION_SCENARIO, output, {
+      fixtureOptions: {
+        candidate: { startupFailure: true },
+      },
+    });
+    assert.equal(evidence.outcome, 'INCONCLUSIVE');
+    assert.equal(evidence.exitCode, 2);
+    assert.equal(evidence.reason.code, 'STARTUP_FAILURE');
+    assert.equal(evidence.reason.side, 'candidate');
+    assert.equal(evidence.services.reference.ready, true);
+    assert.equal(evidence.services.candidate.ready, false);
+    assert.deepEqual(evidence.steps, []);
+    assertProcessStopped(evidence.services.reference.pid);
+    assertProcessStopped(evidence.services.candidate.pid);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
