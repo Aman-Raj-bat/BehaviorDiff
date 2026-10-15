@@ -43,6 +43,51 @@ function jsonResponse(response, status, body) {
   response.end(payload);
 }
 
+function textResponse(response, status, body, contentType = 'text/plain; charset=utf-8') {
+  if (response.destroyed) return;
+  response.writeHead(status, {
+    'content-type': contentType,
+    'cache-control': 'no-store',
+    'content-length': Buffer.byteLength(body),
+  });
+  response.end(body);
+}
+
+async function readJsonFile(filePath, label) {
+  let raw;
+  try {
+    raw = await readFile(filePath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') throw new WorkbenchRequestError(`${label} was not found`, 404);
+    throw error;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new WorkbenchRequestError(`${label} is not valid JSON: ${error.message}`, 422);
+  }
+}
+
+function boundedInteger(value, label, minimum, maximum) {
+  if (value === undefined) return undefined;
+  if (!Number.isInteger(value) || value < minimum || value > maximum) {
+    throw new WorkbenchRequestError(`${label} must be an integer from ${minimum} to ${maximum}`);
+  }
+  return value;
+}
+
+export function scenarioPathFor(scenarioId, root = ROOT) {
+  if (typeof scenarioId !== 'string' || !Object.hasOwn(SCENARIOS, scenarioId)) {
+    throw new WorkbenchRequestError('scenario must be one of the checked-in scenarios');
+  }
+  const scenariosDirectory = path.resolve(root, 'scenarios');
+  const scenarioPath = path.resolve(scenariosDirectory, SCENARIOS[scenarioId]);
+  if (!scenarioPath.startsWith(`${scenariosDirectory}${path.sep}`)) {
+    throw new WorkbenchRequestError('scenario path is outside the trusted scenario directory', 400);
+  }
+  return scenarioPath;
+}
+
 
   return {};
 }
