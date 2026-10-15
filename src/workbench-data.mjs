@@ -63,6 +63,51 @@ export function parseEvidence(raw, label = 'evidence') {
     if (step.comparison?.ignoredPaths !== undefined && !Array.isArray(step.comparison.ignoredPaths)) {
       throw new WorkbenchEvidenceError(`${label}.steps[${index}].comparison.ignoredPaths must be an array when present`);
     }
+  }
+  if (evidence.reduction !== undefined && !isRecord(evidence.reduction)) {
+    throw new WorkbenchEvidenceError(`${label}.reduction must be an object when present`);
+  }
+  return evidence;
+}
+
+function firstMismatch(evidence) {
+  if (evidence.outcome !== 'REGRESSION') return null;
+  for (const step of evidence.steps ?? []) {
+    const difference = step?.comparison?.differences?.[0];
+    if (!difference || typeof difference.pointer !== 'string' || typeof step.id !== 'string') continue;
+    return {
+      stepId: step.id,
+      pointer: difference.pointer,
+      classification: difference.pointer === '$status' ? 'STATUS_DIFFERENCE' : 'BUSINESS_DIFFERENCE',
+    };
+  }
+  return null;
+}
+
+function scenarioStepCount(scenario) {
+  return Array.isArray(scenario?.steps) ? scenario.steps.length : null;
+}
+
+function serviceView(service) {
+  if (!isRecord(service)) return null;
+  return {
+    fixture: optionalString(service.fixture),
+    ready: optionalBoolean(service.ready),
+    reset: optionalBoolean(service.reset),
+    pid: isInteger(service.pid) ? service.pid : null,
+    baseUrl: optionalString(service.baseUrl),
+  };
+}
+
+function attemptView(attempt) {
+  if (!isRecord(attempt)) return null;
+  return {
+    attempt: isInteger(attempt.attempt) ? attempt.attempt : null,
+    operation: optionalString(attempt.operation),
+    location: optionalString(attempt.location),
+    candidateStepCount: isInteger(attempt.candidateStepCount) ? attempt.candidateStepCount : null,
+    result: optionalString(attempt.result),
+    reason: optionalString(attempt.reason),
 
   return {};
 }
