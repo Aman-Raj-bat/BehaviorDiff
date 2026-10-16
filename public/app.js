@@ -423,5 +423,60 @@ function renderModel(model) {
         <div>${responseComparison(model)}${shrinkInvestigation(model)}${scenarioReplay(model)}</div>
         <aside>
           <section class="section" style="margin-top:0"><div class="section-title"><h3>Mismatch signature</h3><p>Stable target</p></div>${targetCard(model)}</section>
+          <section class="section"><div class="section-title"><h3>Run metadata</h3></div>${runDetails(model)}</section>
+        </aside>
+      </div>
+      <div class="footer-note">Measured values come from the evidence artifact. “Unavailable” means the runner did not record that field; it is not a success signal.</div>
+    </div>
+  `;
+  main.focus({ preventScroll: true });
+}
+
+async function loadRun(runId) {
+  setRunStatus('Loading evidence…');
+  try {
+    const model = await api(`/api/runs/${encodeURIComponent(runId)}`);
+    renderModel(model);
+    setRunStatus(`Loaded ${model.outcome}`);
+  } catch (error) {
+    setRunStatus(error.message, { error: true });
+  }
+}
+
+async function submitRun(event) {
+  event.preventDefault();
+  const scenario = scenarioSelect.value;
+  if (!scenario) {
+    setRunStatus('Choose a scenario first.', { error: true });
+    return;
+  }
+  const mode = selectedMode();
+  const body = { scenario, mode };
+  if (mode === 'shrink') body.maxAttempts = Number(maxAttempts.value);
+  runButton.disabled = true;
+  setRunStatus(mode === 'shrink' ? 'Running baseline and verified reductions…' : 'Starting paired replay…');
+  try {
+    const model = await api('/api/runs', { method: 'POST', body: JSON.stringify(body) });
+    state.selectedScenario = scenario;
+    renderModel(model);
+    await refreshRuns();
+    setRunStatus(`${model.outcome} evidence loaded.`);
+  } catch (error) {
+    setRunStatus(error.message, { error: true });
+  } finally {
+    runButton.disabled = false;
+  }
+}
+
+async function replayMinimized(runId) {
+  const button = document.querySelector(`[data-replay-run="${CSS.escape(runId)}"]`);
+  if (button) button.disabled = true;
+  setRunStatus('Replaying the exported minimized scenario through the real fixtures…');
+  try {
+    const model = await api(`/api/runs/${encodeURIComponent(runId)}/replay`, { method: 'POST', body: '{}' });
+    renderModel(model);
+    setRunStatus(`Replay returned ${model.outcome}.`);
+  } catch (error) {
+    setRunStatus(error.message, { error: true });
 
 }
