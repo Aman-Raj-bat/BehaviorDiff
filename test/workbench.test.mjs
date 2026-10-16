@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { buildWorkbenchModel, parseEvidence, WorkbenchEvidenceError } from '../src/workbench-data.mjs';
+import {
+  createWorkbenchServer,
+  scenarioPathFor,
+  validateRunRequest,
+} from '../src/workbench-server.mjs';
+import { runScenario } from '../src/run-scenario.mjs';
+
+const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
+const REGRESSION_SCENARIO = path.join(ROOT, 'scenarios', 'cart-total.json');
+const PASS_SCENARIO = path.join(ROOT, 'scenarios', 'cart-total-pass.json');
+const NOISY_SCENARIO = path.join(ROOT, 'scenarios', 'cart-noisy.json');
+
+async function scenarioAt(filePath) {
+  return JSON.parse(await readFile(filePath, 'utf8'));
+}
+
+test('workbench model renders actual regression values, target path, and copy payloads', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-model-'));
+  try {
+    const evidence = await runScenario(REGRESSION_SCENARIO, path.join(directory, 'run'));
+    const model = buildWorkbenchModel(evidence, {
+      scenario: await scenarioAt(REGRESSION_SCENARIO),
+      runId: 'run-regression-test',
+      artifactBase: '/api/runs/run-regression-test',
+    });
+    const addItem = model.steps.find((step) => step.id === 'add-item');
+    assert.equal(model.outcome, 'REGRESSION');
+    assert.deepEqual(model.mismatch, {
+      stepId: 'add-item',
+      pointer: '/items/0/lineTotal',
+      classification: 'BUSINESS_DIFFERENCE',
+    });
+    assert.equal(addItem.reference.response.body.items[0].lineTotal, 20);
+    assert.equal(addItem.candidate.response.body.items[0].lineTotal, 10);
+    assert.deepEqual(addItem.comparison.differences[0], {
+      pointer: '/items/0/lineTotal',
+      reference: 20,
+      candidate: 10,
+    });
+    assert.match(model.copyPayloads.scenario, /cart quantity contributes/);
+    assert.match(model.copyPayloads.mismatch, /lineTotal/);
+    assert.equal(model.artifacts.evidence, '/api/runs/run-regression-test/evidence');
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
