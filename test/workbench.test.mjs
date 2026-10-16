@@ -51,3 +51,30 @@ test('workbench model renders actual regression values, target path, and copy pa
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('workbench model preserves six-to-two shrink evidence and accepted/rejected decisions', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-shrink-'));
+  try {
+    const evidence = await runScenario(NOISY_SCENARIO, path.join(directory, 'run'), {
+      shrink: { maxAttempts: 100 },
+    });
+    const model = buildWorkbenchModel(evidence, {
+      scenario: evidence.reduction.finalScenario,
+      originalScenario: evidence.reduction.originalScenario,
+      runId: 'shrink-evidence-test',
+    });
+    assert.equal(model.counts.originalStepCount, 6);
+    assert.equal(model.counts.minimizedStepCount, 2);
+    assert.equal(model.counts.actualReplays, evidence.reduction.actualReplays);
+    assert.equal(model.counts.attemptsUsed, evidence.reduction.attemptsUsed);
+    assert.equal(model.reduction.minimalUnderOperations, true);
+    assert.equal(model.reduction.attempts.some((attempt) => attempt.result === 'ACCEPTED'), true);
+    assert.equal(model.reduction.attempts.some((attempt) => attempt.result === 'REJECTED'), true);
+    assert.equal(model.reduction.attempts.some((attempt) => attempt.reason === 'CONFIG_ERROR'), true);
+    assert.equal(model.reduction.attempts.some((attempt) => attempt.reason === 'MISMATCH_NOT_REPRODUCED'), true);
+    assert.equal(model.reduction.attempts.every((attempt, index) => attempt.attempt === evidence.reduction.attempts[index].attempt), true);
+    assert.deepEqual(model.scenarios.minimized.steps.map((step) => step.id), ['create-cart', 'add-item']);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
