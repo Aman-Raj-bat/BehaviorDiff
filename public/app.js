@@ -198,5 +198,80 @@ function jsonTree(value, pointer, depth, differences, ignoredDifferences, label 
   }
   const entries = Array.isArray(value) ? value.map((item, index) => [index, item]) : Object.entries(value);
   if (entries.length === 0) {
+    return `<div class="json-line ${marker}" style="--depth:${depth}">${labelHtml}<span class="json-punctuation">${Array.isArray(value) ? '[]' : '{}'}</span></div>`;
+  }
+  const open = Array.isArray(value) ? '[' : '{';
+  const close = Array.isArray(value) ? ']' : '}';
+  let html = `<div class="json-line ${marker}" style="--depth:${depth}">${labelHtml}<span class="json-punctuation">${open}</span></div>`;
+  entries.forEach(([key, child], index) => {
+    const childLabel = Array.isArray(value) ? String(key) : String(key);
+    html += jsonTree(child, childPointer(pointer, key), depth + 1, differences, ignoredDifferences, childLabel);
+    if (index < entries.length - 1) {
+      // The tree is intentionally line-oriented; commas are visual only and the displayed value remains the evidence body.
+      html += `<div class="json-line" style="--depth:${depth + 1}"><span class="json-punctuation">,</span></div>`;
+    }
+  });
+  html += `<div class="json-line" style="--depth:${depth}"><span class="json-punctuation">${close}</span></div>`;
+  return html;
+}
+
+function responseMetadata(response) {
+  if (!response) return '';
+  const headers = response.headers ?? {};
+  const values = [];
+  if (response.durationMs !== undefined) values.push(`${escapeHtml(response.durationMs)} ms`);
+  if (headers['content-type']) values.push(escapeHtml(headers['content-type']));
+  if (headers['x-behavior-diff-fixture']) values.push(escapeHtml(headers['x-behavior-diff-fixture']));
+  return values.join('<span>·</span>') || '<span class="unavailable">Metadata unavailable</span>';
+}
+
+function responsePane(side, data, differences, ignoredDifferences) {
+  const response = data?.response;
+  const status = response?.status;
+  const statusClass = status >= 200 && status < 400 ? 'ok' : status === undefined ? '' : 'bad';
+  const request = data?.request;
+  const body = response?.body;
+  return `
+    <div class="response-pane">
+      <div class="response-pane-header"><strong>${side === 'reference' ? 'REFERENCE' : 'CANDIDATE'}</strong><span class="status-code ${statusClass}">${status === undefined ? 'HTTP —' : `HTTP ${escapeHtml(status)}`}</span></div>
+      ${request ? `<div class="response-meta"><span>${escapeHtml(request.method ?? 'METHOD —')}</span><span>${escapeHtml(request.path ?? 'Path unavailable')}</span></div>` : ''}
+      <div class="response-meta">${responseMetadata(response)}</div>
+      <div class="response-body">${response ? `<div class="json-tree">${jsonTree(body, '', 0, differences, ignoredDifferences)}</div>` : data?.error ? `<div class="unavailable">${escapeHtml(data.error.code ?? 'Replay error')}: ${escapeHtml(data.error.message ?? 'Details unavailable')}</div>` : '<div class="unavailable">Response unavailable</div>'}</div>
+    </div>
+  `;
+}
+
+function diffPanel(title, differences, className = '') {
+  if (!differences || differences.length === 0) return '';
+  return `
+    <div class="diff-panel ${className}">
+      <div class="diff-panel-header">${escapeHtml(title)}</div>
+      ${differences.map((difference) => `<div class="diff-row">
+        <div class="diff-pointer">${display(difference.pointer)}</div>
+        <div class="diff-value reference">${pretty(difference.reference)}</div>
+        <div class="diff-value candidate">${pretty(difference.candidate)}</div>
+      </div>`).join('')}
+    </div>
+  `;
+}
+
+function responseComparison(model) {
+  const steps = model.steps ?? [];
+  if (steps.length === 0) {
+    return `<section class="section"><div class="section-title"><h3>Response comparison</h3></div><div class="notice">No paired response steps were recorded. This run is ${escapeHtml(model.outcome)}; response bodies are unavailable.</div></section>`;
+  }
+  const mismatchStep = model.mismatch?.stepId;
+  const selected = state.selectedStep && steps.some((step) => step.id === state.selectedStep)
+    ? state.selectedStep
+    : mismatchStep && steps.some((step) => step.id === mismatchStep) ? mismatchStep : steps[0].id;
+  state.selectedStep = selected;
+  const step = steps.find((item) => item.id === selected) ?? steps[0];
+  const comparison = step.comparison ?? {};
+  const differences = comparison.differences ?? [];
+  const ignored = comparison.ignoredDifferences ?? [];
+  const diffPointers = pointerSet(differences.filter((entry) => entry.pointer !== '$status'));
+  const ignoredPointers = pointerSet(ignored);
+  return `
+    <section class="section">
 
 }
