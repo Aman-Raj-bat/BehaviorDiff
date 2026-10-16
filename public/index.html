@@ -43,7 +43,47 @@
               <label class="mode-option">
                 <input type="radio" name="mode" value="run" checked>
                 <span><strong>Compare</strong><small>One real paired replay</small></span>
+              </label>
+              <label class="mode-option">
+                <input type="radio" name="mode" value="shrink">
+                <span><strong>Shrink</strong><small>Replay the reducer's candidates</small></span>
+              </label>
+            </fieldset>
 
-  </div>
-</body>
+            <label for="max-attempts">Shrink attempt budget</label>
+            <input id="max-attempts" name="maxAttempts" type="number" min="1" max="10000" value="100" disabled>
+            <button id="run-button" class="primary-button" type="submit">Run investigation</button>
+            <div id="run-status" class="form-status" aria-live="polite"></div>
+          </form>
+
+          <div class="sidebar-section safety-note">
+            <div class="eyebrow">Execution boundary</div>
+            <p>Loopback fixtures only. Scenarios, commands, and remote URLs are not accepted from the browser.</p>
+          </div>
+
+          <section class="recent-section">
+            <div class="section-heading">
+              <div class="eyebrow">Local history</div>
+              <button id="refresh-runs" class="text-button" type="button">Refresh</button>
+            </div>
+            <div id="recent-runs" class="recent-runs"><span class="muted">No runs loaded.</span></div>
+          </section>
+        </aside>
+
+        <main id="main-content" class="main-content" tabindex="-1">
+          <section class="empty-state">
+            <div class="empty-kicker">PHASE 3 / EVIDENCE-LED DEBUGGING</div>
+            <h2>Make a behavior mismatch legible.</h2>
+            <p>Choose a trusted scenario to see real response bodies, the exact mismatch signature, and every shrinking decision in one place.</p>
+            <div class="empty-grid">
+              <div><span class="empty-number">01</span><strong>Compare</strong><small>Reference and candidate responses stay side by side.</small></div>
+              <div><span class="empty-number">02</span><strong>Explain</strong><small>JSON Pointer differences remain tied to the recorded step.</small></div>
+              <div><span class="empty-number">03</span><strong>Reduce</strong><small>Accepted and rejected attempts come from actual replays.</small></div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/app.js"></script>
+  </body>
 </html>
