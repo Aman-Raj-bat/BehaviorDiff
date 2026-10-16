@@ -77,44 +77,63 @@ code, pre, .run-id, .service-meta, .service-url, .json-tree, .diff-pointer, .dif
 
 /* Instrument bar */
 .topbar {
-  height: 66px;
-  padding: 0 30px;
-  border-bottom: 1px solid var(--line);
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  min-height: 72px;
+  padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #0e131a;
+  background: rgba(16, 19, 22, .96);
+  backdrop-filter: blur(12px);
 }
 
 .wordmark {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
+  gap: var(--space-3);
   text-decoration: none;
   letter-spacing: .01em;
 }
 
 .wordmark strong, .wordmark small { display: block; }
-.wordmark strong { font-size: 15px; line-height: 1.1; }
-.wordmark small { margin-top: 4px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .15em; }
+.wordmark strong { color: var(--text-primary); font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: .95; letter-spacing: -.045em; }
+.wordmark strong span { color: var(--signal-lime); }
+.wordmark small { margin-top: 6px; color: var(--text-muted); font-family: var(--font-mono); font-size: 8px; font-weight: 700; letter-spacing: .14em; }
 
 .wordmark-mark {
-  width: 31px;
-  height: 31px;
-  display: grid;
-  place-items: center;
-  border: 1px solid #567bab;
-  color: var(--blue-strong);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .04em;
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  background: var(--shell);
 }
+.mark-track { position: absolute; left: 5px; width: 25px; height: 1px; transform-origin: left center; background: var(--signal-blue); }
+.mark-track-one { top: 13px; transform: rotate(25deg); }
+.mark-track-two { top: 25px; transform: rotate(-25deg); background: var(--signal-vermilion); }
+.mark-node { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--signal-blue); }
+.mark-node-one { top: 10px; left: 5px; }
+.mark-node-two { bottom: 10px; left: 5px; background: var(--signal-vermilion); }
+.mark-node-diff { top: 16px; right: 5px; width: 7px; height: 7px; border-radius: 0; transform: rotate(45deg); background: var(--signal-lime); }
 
-.topbar-note { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .12em; }
-.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(112, 212, 155, .11); }
+.topbar-status { display: flex; align-items: center; gap: var(--space-2); color: var(--text-secondary); font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; }
+.topbar-scenario { display: grid; grid-template-columns: auto minmax(125px, 1fr); align-items: center; gap: 8px; margin-left: auto; margin-right: 22px; }
+.topbar-scenario > span { color: var(--text-muted); font-family: var(--font-mono); font-size: 8px; letter-spacing: .1em; }
+.topbar-scenario select { min-height: 29px; padding: 0 8px; border-color: var(--border); background: var(--shell); font-family: var(--font-mono); font-size: 9px; }
+.status-led, .readout-led { width: 7px; height: 7px; display: inline-block; border-radius: 50%; background: var(--signal-lime); box-shadow: 0 0 0 3px rgba(215, 255, 100, .08); }
+.topbar-divider { width: 1px; height: 14px; margin: 0 var(--space-2); background: var(--border); }
+.topbar-readout { color: var(--text-muted); }
+.topbar-context { display: grid; gap: 2px; min-width: 150px; padding-left: 16px; border-left: 1px solid var(--border); text-align: right; }
+.topbar-context span { color: var(--text-muted); font-family: var(--font-mono); font-size: 8px; letter-spacing: .11em; }
+.topbar-context strong { overflow: hidden; color: var(--text-primary); font-family: var(--font-mono); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 
-.workspace { display: grid; grid-template-columns: 302px minmax(0, 1fr); min-height: calc(100vh - 66px); }
+.workspace { display: grid; grid-template-columns: 278px minmax(0, 1fr); min-height: calc(100vh - 72px); }
 
+/* Control rail */
 .sidebar {
   padding: 27px 22px 28px;
   border-right: 1px solid var(--line);
