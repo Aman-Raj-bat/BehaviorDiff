@@ -102,3 +102,20 @@ test('PASS, ignored volatile fields, and INCONCLUSIVE evidence remain distinct',
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('malformed and incomplete evidence fail safely without inventing measurements', () => {
+  assert.throws(() => parseEvidence('{bad json'), WorkbenchEvidenceError);
+  assert.throws(() => parseEvidence({ outcome: 'MAYBE' }), /outcome/);
+  assert.throws(() => parseEvidence({ outcome: 'INCONCLUSIVE', steps: [null] }), /steps\[0\]/);
+  assert.throws(() => parseEvidence({ outcome: 'REGRESSION', steps: [{ comparison: { differences: 'not-an-array' } }] }), /differences/);
+  const summaryOnly = buildWorkbenchModel({
+    outcome: 'REGRESSION',
+    summary: { firstDifference: { stepId: 'invented', pointer: '/not-recorded', classification: 'BUSINESS_DIFFERENCE' } },
+  });
+  assert.equal(summaryOnly.mismatch, null);
+  const incomplete = buildWorkbenchModel({ outcome: 'INCONCLUSIVE' });
+  assert.equal(incomplete.counts.actualReplays, null);
+  assert.equal(incomplete.counts.originalStepCount, null);
+  assert.equal(incomplete.mismatch, null);
+  assert.equal(incomplete.copyPayloads.scenario, null);
+});
