@@ -273,5 +273,80 @@ function responseComparison(model) {
   const ignoredPointers = pointerSet(ignored);
   return `
     <section class="section">
+      <div class="section-title"><h3>Response comparison</h3><p>Recorded paired responses, not re-created summaries</p></div>
+      <div class="step-tabs">${steps.map((item) => `<button type="button" class="step-tab ${item.id === selected ? 'selected' : ''} ${item.comparison?.differences?.length ? 'has-diff' : ''}" data-step-id="${escapeHtml(item.id)}">${escapeHtml(item.id)}</button>`).join('')}</div>
+      <div class="comparison-head"><strong>${escapeHtml(step.id ?? 'Step unavailable')}</strong><span>expected HTTP ${step.expectedStatus === undefined ? '—' : escapeHtml(step.expectedStatus)}</span></div>
+      <div class="response-grid">
+        ${responsePane('reference', step.reference, diffPointers, ignoredPointers)}
+        ${responsePane('candidate', step.candidate, diffPointers, ignoredPointers)}
+      </div>
+      ${diffPanel('Business and status differences', differences)}
+      ${diffPanel('Ignored differences / explicitly excluded paths', ignored, 'ignored-panel')}
+      ${comparison.ignoredPaths?.length ? `<div class="footer-note">Ignored paths configured for this step: ${comparison.ignoredPaths.map((path) => `<code>${escapeHtml(path)}</code>`).join(', ')}</div>` : ''}
+    </section>
+  `;
+}
+
+function shrinkChip(label, value) {
+  return `<div class="shrink-chip"><label>${escapeHtml(label)}</label><strong>${value}</strong></div>`;
+}
+
+function attemptResult(attempt) {
+  if (attempt.result === null) return '<span class="attempt-result unavailable">UNAVAILABLE</span>';
+  return `<span class="attempt-result ${attempt.result === 'ACCEPTED' ? 'accepted' : 'rejected'}">${escapeHtml(attempt.result)}</span>`;
+}
+
+function attemptTable(attempts, available) {
+  if (!available) return '<div class="notice">Reduction attempt records are unavailable in this evidence.</div>';
+  if (attempts.length === 0) return '<div class="notice">No reduction attempts were recorded. The baseline may have consumed the full budget.</div>';
+  return `<div class="attempts-wrap"><table class="attempt-table"><thead><tr><th>#</th><th>Operation</th><th>Candidate</th><th>Replay</th><th>Decision</th><th>Recorded reason</th></tr></thead><tbody>${attempts.map((attempt) => `
+    <tr>
+      <td><code>${attempt.attempt === null ? '—' : escapeHtml(attempt.attempt)}</code></td>
+      <td><span class="attempt-operation">${display(attempt.operation)}</span><br><code>${display(attempt.location)}</code></td>
+      <td>${attempt.candidateStepCount === null ? '<span class="unavailable">—</span>' : escapeHtml(attempt.candidateStepCount)} steps</td>
+      <td>${attempt.replayed === null ? '<span class="unavailable">Unavailable</span>' : attempt.replayed ? '<span class="state-ready">yes</span>' : '<span class="muted">no</span>'}</td>
+      <td>${attemptResult(attempt)}</td>
+      <td class="attempt-reason">${display(attempt.reason)}${attempt.metadata?.error ? `<br><small>${escapeHtml(attempt.metadata.error)}</small>` : ''}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+function shrinkInvestigation(model) {
+  const reduction = model.reduction;
+  if (!reduction) return '';
+  const original = model.scenarios.original;
+  const minimized = model.scenarios.minimized;
+  const minimal = reduction.minimalUnderOperations === true
+    ? '<strong>Minimal under implemented operations.</strong> Greedy step deletion and bounded scalar simplification completed; this is not a proof of a globally optimal minimum.'
+    : '<strong>Minimality unavailable.</strong> The evidence does not claim a globally optimal minimum.';
+  return `
+    <section class="section">
+      <div class="section-title"><h3>Shrinking investigation</h3><p>Every decision below is copied from reduction evidence</p></div>
+      <div class="shrink-summary">
+        ${shrinkChip('Status', display(reduction.status))}
+        ${shrinkChip('Original steps', countValue(reduction.originalStepCount))}
+        ${shrinkChip('Final steps', countValue(reduction.finalStepCount))}
+        ${shrinkChip('Attempts used', reduction.attemptsUsed === null || reduction.maxAttempts === null ? '<span class="unavailable">—</span>' : `${escapeHtml(reduction.attemptsUsed)} / ${escapeHtml(reduction.maxAttempts)}`)}
+        ${shrinkChip('Actual replays', countValue(reduction.actualReplays))}
+        ${shrinkChip('Accepted operations', countValue(reduction.acceptedOperations))}
+      </div>
+      <p class="minimal-note">${minimal}</p>
+      <div class="scenario-columns">
+        <div class="scenario-panel"><h4>Original scenario · ${original?.steps?.length ?? '—'} steps</h4><pre>${pretty(original)}</pre></div>
+        <div class="scenario-panel"><h4>Minimized scenario · ${minimized?.steps?.length ?? '—'} steps</h4><pre>${pretty(minimized)}</pre></div>
+      </div>
+      <div class="section-title" style="margin-top:22px"><h3>Reduction attempts</h3><p>Accepted is not inferred from a changed step count</p></div>
+      ${attemptTable(reduction.attempts, reduction.attemptsAvailable)}
+    </section>
+  `;
+}
+
+function scenarioReplay(model) {
+  const scenarioJson = model.copyPayloads?.scenario;
+  const mismatchJson = model.copyPayloads?.mismatch;
+  state.copyPayloads.set('scenario', scenarioJson);
+  state.copyPayloads.set('command', model.copyPayloads?.replayCommand);
+  state.copyPayloads.set('mismatch', mismatchJson);
+  const replayAction = model.scenarios.minimized && model.runId && !model.runId.includes('/')
+    ? `<button class="secondary-button" type="button" data-replay-run="${escapeHtml(model.runId)}">Replay minimized scenario</button>`
 
 }
