@@ -4,22 +4,41 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="BehaviorDiff local evidence investigation workbench">
-    <title>BehaviorDiff / Investigation Workbench</title>
+    <meta name="theme-color" content="#101316">
+    <title>BehaviorDiff — Evidence Lab</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
         <a class="wordmark" href="/" aria-label="BehaviorDiff workbench home">
-          <span class="wordmark-mark">BD</span>
+          <span class="wordmark-mark" aria-hidden="true">
+            <span class="mark-track mark-track-one"></span>
+            <span class="mark-track mark-track-two"></span>
+            <span class="mark-node mark-node-one"></span>
+            <span class="mark-node mark-node-two"></span>
+            <span class="mark-node mark-node-diff"></span>
+          </span>
           <span>
-            <strong>BehaviorDiff</strong>
-            <small>INVESTIGATION WORKBENCH</small>
+            <strong>BEHAVIOR<span>DIFF</span></strong>
+            <small>EVIDENCE LAB / LOCAL INSTRUMENT</small>
           </span>
         </a>
-        <div class="topbar-note">
-          <span class="live-dot" aria-hidden="true"></span>
-          <span>LOCAL EVIDENCE ONLY</span>
+        <label class="topbar-scenario">
+          <span>SCENARIO</span>
+          <select id="topbar-scenario-select" aria-label="Current trusted scenario">
+            <option value="">Loading…</option>
+          </select>
+        </label>
+        <div class="topbar-status">
+          <span class="status-led" aria-hidden="true"></span>
+          <span>LOOPBACK ONLY</span>
+          <span class="topbar-divider" aria-hidden="true"></span>
+          <span class="topbar-readout">EVIDENCE-LED DEBUGGING</span>
+        </div>
+        <div id="topbar-context" class="topbar-context" aria-live="polite">
+          <span>CASE</span>
+          <strong>NO SPECIMEN LOADED</strong>
         </div>
       </header>
 
