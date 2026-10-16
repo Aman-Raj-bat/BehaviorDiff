@@ -10,11 +10,13 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const main = $('#main-content');
 const scenarioSelect = $('#scenario-select');
+const topbarScenarioSelect = $('#topbar-scenario-select');
 const scenarioDetail = $('#scenario-detail');
 const runForm = $('#run-form');
 const runButton = $('#run-button');
 const runStatus = $('#run-status');
 const maxAttempts = $('#max-attempts');
+const topbarContext = $('#topbar-context');
 
 function escapeHtml(value) {
   return String(value)
@@ -57,6 +59,18 @@ function setRunStatus(message, { error = false } = {}) {
   runStatus.classList.toggle('error', error);
 }
 
+function setTopbarContext(model = null) {
+  if (!topbarContext) return;
+  if (!model) {
+    const selected = state.scenarios.find((item) => item.id === scenarioSelect.value);
+    topbarContext.innerHTML = `<span>CASE / READY</span><strong>${selected ? escapeHtml(selected.id) : 'NO SPECIMEN LOADED'}</strong>`;
+    return;
+  }
+  const reference = model.services?.reference?.fixture ?? 'reference unavailable';
+  const candidate = model.services?.candidate?.fixture ?? 'candidate unavailable';
+  topbarContext.innerHTML = `<span>${escapeHtml(model.outcome)} / ${escapeHtml(model.runId ?? 'UNNUMBERED')}</span><strong>${escapeHtml(reference)} → ${escapeHtml(candidate)}</strong>`;
+}
+
 function selectedMode() {
   return new FormData(runForm).get('mode') ?? 'run';
 }
@@ -67,14 +81,13 @@ function updateModeControls() {
 }
 
 function renderScenarioOptions() {
-  scenarioSelect.innerHTML = '<option value="">Choose a scenario…</option>';
-  for (const scenario of state.scenarios) {
-    const option = document.createElement('option');
-    option.value = scenario.id;
-    option.textContent = scenario.id;
-    scenarioSelect.append(option);
+  const options = ['<option value="">Choose a scenario…</option>', ...state.scenarios.map((scenario) => `<option value="${escapeHtml(scenario.id)}">${escapeHtml(scenario.id)}</option>`)].join('');
+  scenarioSelect.innerHTML = options;
+  topbarScenarioSelect.innerHTML = options.replace('Choose a scenario…', 'Select case…');
+  if (state.selectedScenario) {
+    scenarioSelect.value = state.selectedScenario;
+    topbarScenarioSelect.value = state.selectedScenario;
   }
-  if (state.selectedScenario) scenarioSelect.value = state.selectedScenario;
   renderScenarioDetail();
 }
 
@@ -82,6 +95,7 @@ function renderScenarioDetail() {
   const scenario = state.scenarios.find((item) => item.id === scenarioSelect.value);
   if (!scenario) {
     scenarioDetail.innerHTML = '<span>Select a checked-in scenario.</span>';
+    setTopbarContext();
     return;
   }
   scenarioDetail.innerHTML = [
@@ -89,6 +103,7 @@ function renderScenarioDetail() {
     `<span>${escapeHtml(scenario.reference)} → ${escapeHtml(scenario.candidate)}</span>`,
     `<span>${scenario.stepCount} original steps</span>`,
   ].join('');
+  if (!state.model) setTopbarContext();
 }
 
 function renderRecentRuns() {
