@@ -235,3 +235,23 @@ test('aborting a workbench request cancels the real run and cleans up fixtures',
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('normal workbench runs do not expose shrink-only original scenarios', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-original-'));
+  const outputRoot = path.join(directory, 'artifacts');
+  const workbench = createWorkbenchServer({ outputRoot });
+  try {
+    const address = await workbench.listen({ port: 0 });
+    const response = await fetch(`${address.url.replace(/\/$/, '')}/api/runs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scenario: 'cart-total', mode: 'run' }),
+    });
+    const model = await response.json();
+    const original = await fetch(`${address.url.replace(/\/$/, '')}/api/runs/${model.runId}/original-scenario`);
+    assert.equal(original.status, 404);
+  } finally {
+    await workbench.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
