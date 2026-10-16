@@ -128,10 +128,22 @@ test('workbench API uses fixed scenarios and performs a real replay action', asy
     const request = (pathname, options) => fetch(`${address.url.replace(/\/$/, '')}${pathname}`, options);
     const page = await request('/');
     assert.equal(page.status, 200);
-    assert.match(await page.text(), /Make a behavior mismatch legible/);
+    const pageHtml = await page.text();
+    assert.match(pageHtml, /Make a behavior mismatch legible/);
+    assert.match(pageHtml, /EVIDENCE LAB/);
+    assert.match(pageHtml, /topbar-scenario-select/);
     const script = await request('/app.js');
     assert.equal(script.status, 200);
-    assert.match(await script.text(), /navigator\.clipboard\.writeText/);
+    const appScript = await script.text();
+    assert.match(appScript, /navigator\.clipboard\.writeText/);
+    assert.match(appScript, /evidenceRail/);
+    assert.match(appScript, /mismatchSpecimen/);
+    const styles = await request('/styles.css');
+    assert.equal(styles.status, 200);
+    const stylesText = await styles.text();
+    assert.match(stylesText, /--signal-lime:\s*#D7FF64/);
+    assert.match(stylesText, /\.specimen/);
+    assert.match(stylesText, /\.reduction-trace/);
     const scenarios = await (await request('/api/scenarios')).json();
     assert.deepEqual(scenarios.scenarios.map((scenario) => scenario.id), ['cart-total', 'cart-total-pass', 'cart-noisy']);
 
