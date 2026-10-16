@@ -348,5 +348,80 @@ function scenarioReplay(model) {
   state.copyPayloads.set('mismatch', mismatchJson);
   const replayAction = model.scenarios.minimized && model.runId && !model.runId.includes('/')
     ? `<button class="secondary-button" type="button" data-replay-run="${escapeHtml(model.runId)}">Replay minimized scenario</button>`
+    : '';
+  return `
+    <section class="section">
+      <div class="section-title"><h3>Scenario and replay evidence</h3><p>Portable artifacts from this run</p></div>
+      <div class="heading-actions" style="justify-content:flex-start; margin-bottom:10px">${replayAction}</div>
+      <div class="scenario-columns">
+        <div class="scenario-panel">
+          <div class="command-head"><strong>Minimized scenario JSON</strong><button class="copy-button" type="button" data-copy="scenario">Copy</button></div>
+          <pre>${scenarioJson ? escapeHtml(scenarioJson) : '<span class="unavailable">Unavailable</span>'}</pre>
+        </div>
+        <div class="scenario-panel">
+          <div class="command-head"><strong>Target mismatch</strong><button class="copy-button" type="button" data-copy="mismatch" ${mismatchJson ? '' : 'disabled'}>Copy</button></div>
+          <pre>${mismatchJson ? escapeHtml(mismatchJson) : '<span class="unavailable">Unavailable</span>'}</pre>
+        </div>
+      </div>
+      <div class="command-block" style="margin-top:9px">
+        <div class="command-head"><strong>Recorded replay command</strong><button class="copy-button" type="button" data-copy="command" ${model.copyPayloads?.replayCommand ? '' : 'disabled'}>Copy</button></div>
+        <pre>${model.copyPayloads?.replayCommand ? escapeHtml(model.copyPayloads.replayCommand) : '<span class="unavailable">Unavailable</span>'}</pre>
+      </div>
+      ${model.artifacts ? `<div class="artifact-links"><a href="${escapeHtml(model.artifacts.evidence)}" target="_blank" rel="noreferrer">evidence.json</a><a href="${escapeHtml(model.artifacts.minimizedScenario)}" target="_blank" rel="noreferrer">scenario.replay.json</a>${model.artifacts.originalScenario ? `<a href="${escapeHtml(model.artifacts.originalScenario)}" target="_blank" rel="noreferrer">scenario.original.json</a>` : ''}</div>` : '<div class="footer-note">Artifact paths unavailable.</div>'}
+    </section>
+  `;
+}
+
+function runDetails(model) {
+  const run = model.run ?? {};
+  return `<dl class="detail-list">
+    <div><dt>Run ID</dt><dd>${display(model.runId)}</dd></div>
+    <div><dt>Evidence schema</dt><dd>${model.raw?.schemaVersion === undefined ? '<span class="unavailable">Unavailable</span>' : escapeHtml(model.raw.schemaVersion)}</dd></div>
+    <div><dt>Started</dt><dd>${display(run.startedAt)}</dd></div>
+    <div><dt>Duration</dt><dd>${run.durationMs === undefined ? '<span class="unavailable">Unavailable</span>' : `${escapeHtml(run.durationMs)} ms`}</dd></div>
+    <div><dt>Scenario SHA-256</dt><dd>${display(model.scenario.sha256)}</dd></div>
+    <div><dt>Exit code</dt><dd>${model.exitCode === null ? '<span class="unavailable">Unavailable</span>' : escapeHtml(model.exitCode)}</dd></div>
+  </dl>`;
+}
+
+function renderModel(model) {
+  state.model = model;
+  state.selectedStep = model.mismatch?.stepId ?? model.steps?.[0]?.id ?? null;
+  const outcome = outcomeClass(model.outcome);
+  const serviceReference = model.services?.reference;
+  const serviceCandidate = model.services?.candidate;
+  const stepCountLabel = model.reduction
+    ? `${countValue(model.counts.originalStepCount)} → ${countValue(model.counts.minimizedStepCount)}`
+    : countValue(model.counts.minimizedStepCount);
+  const stepCountSub = model.reduction ? 'original → minimized' : 'recorded scenario steps';
+  const replaySub = model.counts.actualReplays === null ? 'not recorded' : 'real HTTP evaluations';
+  main.innerHTML = `
+    <div class="run-view">
+      <div class="run-heading">
+        <div>
+          ${outcomeBadge(model.outcome)}
+          <h2>${display(model.scenario.name, 'Unnamed scenario')}</h2>
+          <p>${display(serviceReference?.fixture)} <span class="muted">reference</span> <span class="muted">→</span> ${display(serviceCandidate?.fixture)} <span class="muted">candidate</span></p>
+          <div class="run-id">${display(model.runId)}</div>
+        </div>
+        <div class="heading-actions">${model.outcome === 'REGRESSION' ? '<span class="muted" style="font-size:11px">Business difference recorded</span>' : model.outcome === 'PASS' ? '<span class="muted" style="font-size:11px">No unignored differences recorded</span>' : '<span class="muted" style="font-size:11px">Evidence is incomplete</span>'}</div>
+      </div>
+
+      <div class="metric-grid">
+        ${metric('Outcome', `<span class="${outcome}">${escapeHtml(model.outcome)}</span>`, `exit ${model.exitCode === null ? '—' : escapeHtml(model.exitCode)}`)}
+        ${metric(model.reduction ? 'Steps' : 'Scenario steps', stepCountLabel, stepCountSub)}
+        ${metric('Actual replays', countValue(model.counts.actualReplays), replaySub)}
+        ${metric(model.reduction ? 'Shrink attempts' : 'Shrink attempts', countValue(model.counts.attemptsUsed), model.reduction ? 'budget includes baseline' : 'not run')}
+        ${metric('Target', model.mismatch ? `<code>${display(model.mismatch.pointer)}</code>` : '<span class="unavailable">Unavailable</span>', model.mismatch ? display(model.mismatch.stepId) : 'no mismatch signature', 'target')}
+      </div>
+
+      ${model.reason ? `<div class="notice"><strong>${escapeHtml(model.reason.code ?? 'Run reason')}</strong> — ${escapeHtml(model.reason.message ?? 'The evidence did not include a detail message.')}</div>` : ''}
+
+      <div class="service-strip">${serviceCard(serviceReference, 'reference')} ${serviceCard(serviceCandidate, 'candidate')}</div>
+
+      <div class="investigation-columns">
+        <div>${responseComparison(model)}${shrinkInvestigation(model)}${scenarioReplay(model)}</div>
+        <aside>
+          <section class="section" style="margin-top:0"><div class="section-title"><h3>Mismatch signature</h3><p>Stable target</p></div>${targetCard(model)}</section>
 
 }
