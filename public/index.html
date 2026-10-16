@@ -43,15 +43,20 @@
       </header>
 
       <div class="workspace">
-        <aside class="sidebar">
-          <div class="sidebar-section">
-            <div class="eyebrow">Run a trusted fixture</div>
-            <h1>Investigate a scenario</h1>
-            <p class="muted">Run the checked-in reference and candidate services, then inspect the evidence they actually produced.</p>
+        <aside class="control-rail">
+          <div class="rail-stamp" aria-hidden="true">
+            <span>BD / 01</span>
+            <span>FIELD UNIT</span>
           </div>
 
           <form id="run-form" class="run-form">
-            <label for="scenario-select">Scenario</label>
+            <div class="rail-heading">
+              <span class="eyebrow">01 / Case file</span>
+              <h1>Choose a specimen.</h1>
+              <p class="muted">Run the trusted pair. Read what the fixtures actually returned.</p>
+            </div>
+
+            <label for="scenario-select" class="control-label">Trusted scenario</label>
             <select id="scenario-select" name="scenario" required>
               <option value="">Loading scenarios…</option>
             </select>
@@ -61,29 +66,33 @@
               <legend>Investigation mode</legend>
               <label class="mode-option">
                 <input type="radio" name="mode" value="run" checked>
-                <span><strong>Compare</strong><small>One real paired replay</small></span>
+                <span><strong>Compare</strong><small>One paired replay</small></span>
               </label>
               <label class="mode-option">
                 <input type="radio" name="mode" value="shrink">
-                <span><strong>Shrink</strong><small>Replay the reducer's candidates</small></span>
+                <span><strong>Shrink</strong><small>Verify the reduction trail</small></span>
               </label>
             </fieldset>
 
-            <label for="max-attempts">Shrink attempt budget</label>
+            <label for="max-attempts" class="control-label">Shrink attempt budget</label>
             <input id="max-attempts" name="maxAttempts" type="number" min="1" max="10000" value="100" disabled>
-            <button id="run-button" class="primary-button" type="submit">Run investigation</button>
+            <button id="run-button" class="primary-button" type="submit">
+              <span class="button-index">→</span>
+              <span>Run investigation</span>
+              <span class="button-key" aria-hidden="true">⌘↵</span>
+            </button>
             <div id="run-status" class="form-status" aria-live="polite"></div>
           </form>
 
-          <div class="sidebar-section safety-note">
-            <div class="eyebrow">Execution boundary</div>
-            <p>Loopback fixtures only. Scenarios, commands, and remote URLs are not accepted from the browser.</p>
+          <div class="rail-note safety-note">
+            <div class="eyebrow">Boundary / hard limit</div>
+            <p>Only checked-in scenarios and loopback fixtures can execute. No remote URLs, shell strings, or user programs enter the lab.</p>
           </div>
 
           <section class="recent-section">
             <div class="section-heading">
-              <div class="eyebrow">Local history</div>
-              <button id="refresh-runs" class="text-button" type="button">Refresh</button>
+              <div class="eyebrow">02 / Recent evidence</div>
+              <button id="refresh-runs" class="text-button" type="button">Reload</button>
             </div>
             <div id="recent-runs" class="recent-runs"><span class="muted">No runs loaded.</span></div>
           </section>
@@ -91,14 +100,28 @@
 
         <main id="main-content" class="main-content" tabindex="-1">
           <section class="empty-state">
-            <div class="empty-kicker">PHASE 3 / EVIDENCE-LED DEBUGGING</div>
-            <h2>Make a behavior mismatch legible.</h2>
-            <p>Choose a trusted scenario to see real response bodies, the exact mismatch signature, and every shrinking decision in one place.</p>
-            <div class="empty-grid">
-              <div><span class="empty-number">01</span><strong>Compare</strong><small>Reference and candidate responses stay side by side.</small></div>
-              <div><span class="empty-number">02</span><strong>Explain</strong><small>JSON Pointer differences remain tied to the recorded step.</small></div>
-              <div><span class="empty-number">03</span><strong>Reduce</strong><small>Accepted and rejected attempts come from actual replays.</small></div>
+            <div class="empty-kicker">EVIDENCE LAB / READY</div>
+            <div class="empty-layout">
+              <div>
+                <h2>Make a behavior mismatch legible.</h2>
+                <p>Pair two local API implementations. Inspect the response specimen. Reduce the failing scenario without losing the target.</p>
+              </div>
+              <div class="empty-instrument" aria-label="BehaviorDiff comparison instrument diagram">
+                <div class="instrument-grid"></div>
+                <span class="instrument-label instrument-label-top">REFERENCE</span>
+                <span class="instrument-label instrument-label-bottom">CANDIDATE</span>
+                <span class="instrument-line instrument-line-one"></span>
+                <span class="instrument-line instrument-line-two"></span>
+                <span class="instrument-junction"></span>
+                <span class="instrument-target">Δ</span>
+              </div>
             </div>
+            <div class="empty-grid">
+              <div><span class="empty-number">01</span><strong>Compare</strong><small>Two real HTTP response bodies, held to the same request.</small></div>
+              <div><span class="empty-number">02</span><strong>Locate</strong><small>A JSON Pointer pins the difference to an exact field.</small></div>
+              <div><span class="empty-number">03</span><strong>Reduce</strong><small>Every accepted operation is a verified replay, not a guess.</small></div>
+            </div>
+            <div class="empty-footer"><span>SELECT A TRUSTED SCENARIO TO BEGIN</span><span class="empty-footer-rule"></span><span>NO MOCKS / NO ESTIMATES</span></div>
           </section>
         </main>
       </div>
