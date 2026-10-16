@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="BehaviorDiff local evidence investigation workbench">
+    <title>BehaviorDiff / Investigation Workbench</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="wordmark" href="/" aria-label="BehaviorDiff workbench home">
+          <span class="wordmark-mark">BD</span>
+          <span>
+            <strong>BehaviorDiff</strong>
+            <small>INVESTIGATION WORKBENCH</small>
+          </span>
+        </a>
+        <div class="topbar-note">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span>LOCAL EVIDENCE ONLY</span>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="sidebar">
+          <div class="sidebar-section">
+            <div class="eyebrow">Run a trusted fixture</div>
+            <h1>Investigate a scenario</h1>
+            <p class="muted">Run the checked-in reference and candidate services, then inspect the evidence they actually produced.</p>
+          </div>
+
+          <form id="run-form" class="run-form">
+            <label for="scenario-select">Scenario</label>
+            <select id="scenario-select" name="scenario" required>
+              <option value="">Loading scenarios…</option>
+            </select>
+            <div id="scenario-detail" class="scenario-detail" aria-live="polite"></div>
+
+            <fieldset class="mode-fieldset">
+              <legend>Investigation mode</legend>
+              <label class="mode-option">
+                <input type="radio" name="mode" value="run" checked>
+                <span><strong>Compare</strong><small>One real paired replay</small></span>
+
+  </div>
+</body>
+</html>
