@@ -29,6 +29,7 @@ function validateDelay(value, label) {
   return value;
 }
 
+function waitForExit(child) {
   if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
   return new Promise((resolve) => child.once('exit', resolve));
 }
@@ -172,11 +173,13 @@ export function spawnFixture(fixture, {
     if (child.exitCode === null && child.signalCode === null) {
       child.kill('SIGTERM');
       await Promise.race([
+        waitForExit(child),
         new Promise((resolve) => setTimeout(resolve, 1_000)),
       ]);
     }
     if (child.exitCode === null && child.signalCode === null) {
       child.kill('SIGKILL');
+      await waitForExit(child);
     }
   }
 
@@ -200,6 +203,7 @@ export function spawnFixture(fixture, {
     start,
     reset,
     stop,
+    waitForExit: (timeoutMs = 500) => {
       if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
       return new Promise((resolve) => {
         const timer = setTimeout(resolve, timeoutMs);

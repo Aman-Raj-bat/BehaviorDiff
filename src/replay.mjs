@@ -119,6 +119,9 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
       throw error;
     }
     for (const [side, result] of settled) {
+      if (result.error && typeof services?.[side]?.waitForExit === 'function') {
+        await services[side].waitForExit();
+      }
       sideData[side].result = result;
     }
 
