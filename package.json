@@ -15,6 +15,5 @@
   "bin": {
     "behavior-diff": "bin/behavior-diff.mjs",
     "behavior-diff-workbench": "bin/behavior-diff-workbench.mjs"
-  },
-  "_commitIndex": 159
+  }
 }
