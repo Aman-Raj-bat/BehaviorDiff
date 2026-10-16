@@ -478,5 +478,53 @@ async function replayMinimized(runId) {
     setRunStatus(`Replay returned ${model.outcome}.`);
   } catch (error) {
     setRunStatus(error.message, { error: true });
-
+    if (button) button.disabled = false;
+  }
 }
+
+async function copyPayload(name, button) {
+  const value = state.copyPayloads.get(name);
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    const original = button.textContent;
+    button.textContent = 'Copied';
+    setTimeout(() => { button.textContent = original; }, 1200);
+  } catch (error) {
+    setRunStatus('Clipboard permission was unavailable; select the displayed content manually.', { error: true });
+  }
+}
+
+document.addEventListener('click', (event) => {
+  const stepButton = event.target.closest('[data-step-id]');
+  if (stepButton && state.model) {
+    state.selectedStep = stepButton.dataset.stepId;
+    renderModel(state.model);
+    return;
+  }
+  const runLink = event.target.closest('[data-run-id]');
+  if (runLink) {
+    loadRun(runLink.dataset.runId);
+    return;
+  }
+  const copyButton = event.target.closest('[data-copy]');
+  if (copyButton) {
+    copyPayload(copyButton.dataset.copy, copyButton);
+    return;
+  }
+  const replayButton = event.target.closest('[data-replay-run]');
+  if (replayButton) replayMinimized(replayButton.dataset.replayRun);
+});
+
+scenarioSelect.addEventListener('change', () => {
+  state.selectedScenario = scenarioSelect.value;
+  renderScenarioDetail();
+});
+runForm.addEventListener('change', updateModeControls);
+runForm.addEventListener('submit', submitRun);
+$('#refresh-runs').addEventListener('click', refreshRuns);
+
+updateModeControls();
+renderScenarioDetail();
+loadScenarios();
+refreshRuns();
