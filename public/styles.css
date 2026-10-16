@@ -288,3 +288,44 @@ input:disabled { color: var(--faint); cursor: not-allowed; }
 .attempt-result.unavailable { color: var(--faint); }
 .attempt-reason { color: var(--muted); }
 
+.command-block { border: 1px solid var(--line); background: var(--panel-deep); }
+.command-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.command-head strong { font-size: 11px; }
+.copy-button { padding: 4px 7px; border: 1px solid var(--line-strong); border-radius: 2px; background: transparent; color: var(--muted); font-size: 10px; }
+.copy-button:hover { color: var(--blue-strong); border-color: var(--blue); }
+.artifact-links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 11px; }
+.artifact-links a { color: var(--blue); font-size: 11px; }
+.artifact-links a:hover { color: var(--blue-strong); }
+.footer-note { margin-top: 37px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--faint); font-size: 10px; }
+
+@media (max-width: 1120px) {
+  .main-content { padding-right: 27px; padding-left: 27px; }
+  .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metric-card.target { grid-column: span 3; }
+}
+
+@media (max-width: 820px) {
+  .topbar { padding: 0 18px; }
+  .topbar-note { display: none; }
+  .workspace { display: block; }
+  .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
+  .run-form { max-width: 480px; }
+  .recent-section { display: none; }
+  .main-content { padding: 28px 18px 54px; }
+  .empty-state { padding-top: 4vh; }
+  .empty-grid { margin-top: 38px; }
+  .investigation-columns { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .main-content { padding-right: 13px; padding-left: 13px; }
+  .run-heading { display: block; }
+  .heading-actions { justify-content: flex-start; margin-top: 17px; }
+  .metric-grid { grid-template-columns: 1fr 1fr; }
+  .metric-card.target { grid-column: span 2; }
+  .service-strip, .response-grid, .scenario-columns { grid-template-columns: 1fr; }
+  .empty-grid { grid-template-columns: 1fr; }
+  .empty-grid > div { min-height: auto; }
+  .empty-number { margin-bottom: 10px; }
+  .diff-row { grid-template-columns: 1fr; gap: 6px; }
+}
