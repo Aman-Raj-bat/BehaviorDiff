@@ -58,3 +58,63 @@ a { color: inherit; }
 .wordmark strong { font-size: 15px; line-height: 1.1; }
 .wordmark small { margin-top: 4px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .15em; }
 
+.wordmark-mark {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #567bab;
+  color: var(--blue-strong);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.topbar-note { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .12em; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(112, 212, 155, .11); }
+
+.workspace { display: grid; grid-template-columns: 302px minmax(0, 1fr); min-height: calc(100vh - 66px); }
+
+.sidebar {
+  padding: 27px 22px 28px;
+  border-right: 1px solid var(--line);
+  background: #11161d;
+}
+
+.sidebar-section { margin-bottom: 25px; }
+.sidebar h1 { margin: 7px 0 8px; font-size: 20px; line-height: 1.15; letter-spacing: -.02em; }
+.sidebar p { margin: 0; }
+.eyebrow, .empty-kicker { color: var(--blue); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.muted { color: var(--muted); }
+
+.run-form { display: grid; gap: 8px; }
+.run-form > label, .mode-fieldset legend { color: #c6ced7; font-size: 11px; font-weight: 700; letter-spacing: .05em; }
+select, input[type="number"] {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  outline: none;
+  background: var(--panel-deep);
+  color: var(--ink);
+}
+select:focus, input[type="number"]:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(105, 167, 255, .12); }
+input:disabled { color: var(--faint); cursor: not-allowed; }
+
+.scenario-detail { min-height: 38px; padding: 9px 10px; border-left: 2px solid var(--line-strong); color: var(--muted); font-size: 11px; }
+.scenario-detail strong { display: block; margin-bottom: 2px; color: var(--ink); font-size: 12px; }
+.scenario-detail span { display: block; }
+
+.mode-fieldset { margin: 12px 0 8px; padding: 0; border: 0; display: grid; gap: 6px; }
+.mode-fieldset legend { margin-bottom: 2px; padding: 0; }
+.mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .015);
+}
+.mode-option:has(input:checked) { border-color: #4d6d94; background: rgba(105, 167, 255, .07); }
