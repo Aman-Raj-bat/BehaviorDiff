@@ -63,5 +63,70 @@ function selectedMode() {
 
 function updateModeControls() {
   const shrinking = selectedMode() === 'shrink';
+  maxAttempts.disabled = !shrinking;
+}
+
+function renderScenarioOptions() {
+  scenarioSelect.innerHTML = '<option value="">Choose a scenario…</option>';
+  for (const scenario of state.scenarios) {
+    const option = document.createElement('option');
+    option.value = scenario.id;
+    option.textContent = scenario.id;
+    scenarioSelect.append(option);
+  }
+  if (state.selectedScenario) scenarioSelect.value = state.selectedScenario;
+  renderScenarioDetail();
+}
+
+function renderScenarioDetail() {
+  const scenario = state.scenarios.find((item) => item.id === scenarioSelect.value);
+  if (!scenario) {
+    scenarioDetail.innerHTML = '<span>Select a checked-in scenario.</span>';
+    return;
+  }
+  scenarioDetail.innerHTML = [
+    `<strong>${escapeHtml(scenario.name)}</strong>`,
+    `<span>${escapeHtml(scenario.reference)} → ${escapeHtml(scenario.candidate)}</span>`,
+    `<span>${scenario.stepCount} original steps</span>`,
+  ].join('');
+}
+
+function renderRecentRuns() {
+  const container = $('#recent-runs');
+  if (state.runs.length === 0) {
+    container.innerHTML = '<span class="muted">No completed runs yet.</span>';
+    return;
+  }
+  container.innerHTML = state.runs.slice(0, 8).map((run) => `
+    <button class="recent-run" type="button" data-run-id="${escapeHtml(run.runId)}">
+      <span class="run-pill ${outcomeClass(run.outcome)}">${escapeHtml(run.outcome)}</span>
+      <strong>${display(run.scenarioName)}</strong>
+      <small>${display(run.runId)}${run.minimizedStepCount === null ? '' : ` · ${run.minimizedStepCount} steps`}</small>
+    </button>
+  `).join('');
+}
+
+async function refreshRuns() {
+  try {
+    const body = await api('/api/runs');
+    state.runs = body.runs ?? [];
+    renderRecentRuns();
+  } catch (error) {
+    renderRecentRuns();
+  }
+}
+
+async function loadScenarios() {
+  try {
+    const body = await api('/api/scenarios');
+    state.scenarios = body.scenarios ?? [];
+    if (!state.selectedScenario) state.selectedScenario = state.scenarios[0]?.id ?? '';
+    renderScenarioOptions();
+  } catch (error) {
+    scenarioSelect.innerHTML = '<option value="">Scenario catalog unavailable</option>';
+    setRunStatus(error.message, { error: true });
+  }
+}
+
 
 }
