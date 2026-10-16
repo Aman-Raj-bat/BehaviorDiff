@@ -119,3 +119,63 @@ test('malformed and incomplete evidence fail safely without inventing measuremen
   assert.equal(incomplete.mismatch, null);
   assert.equal(incomplete.copyPayloads.scenario, null);
 });
+
+test('workbench API uses fixed scenarios and performs a real replay action', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-api-'));
+  const workbench = createWorkbenchServer({ outputRoot: path.join(directory, 'artifacts') });
+  try {
+    const address = await workbench.listen({ port: 0 });
+    const request = (pathname, options) => fetch(`${address.url.replace(/\/$/, '')}${pathname}`, options);
+    const page = await request('/');
+    assert.equal(page.status, 200);
+    assert.match(await page.text(), /Make a behavior mismatch legible/);
+    const script = await request('/app.js');
+    assert.equal(script.status, 200);
+    assert.match(await script.text(), /navigator\.clipboard\.writeText/);
+    const scenarios = await (await request('/api/scenarios')).json();
+    assert.deepEqual(scenarios.scenarios.map((scenario) => scenario.id), ['cart-total', 'cart-total-pass', 'cart-noisy']);
+
+    const unsafe = await request('/api/runs', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scenario: '../secret', mode: 'run' }),
+    });
+    assert.equal(unsafe.status, 400);
+    assert.match((await unsafe.json()).error, /checked-in scenarios/);
+    assert.throws(() => validateRunRequest({ scenario: 'http://example.invalid', mode: 'run' }), /checked-in scenarios/);
+    assert.throws(() => scenarioPathFor('../../etc/passwd'), /checked-in scenarios/);
+
+    const createdResponse = await request('/api/runs', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scenario: 'cart-total', mode: 'run' }),
+    });
+    assert.equal(createdResponse.status, 201);
+    const created = await createdResponse.json();
+    assert.equal(created.outcome, 'REGRESSION');
+    assert.equal(created.steps.find((step) => step.id === 'add-item').candidate.response.body.total, 10);
+
+    const stored = await (await request(`/api/runs/${created.runId}`)).json();
+    assert.equal(stored.mismatch.pointer, '/items/0/lineTotal');
+    const evidenceResponse = await request(`/api/runs/${created.runId}/evidence`);
+    assert.equal(evidenceResponse.status, 200);
+    assert.equal((await evidenceResponse.json()).outcome, 'REGRESSION');
+
+    const replayResponse = await request(`/api/runs/${created.runId}/replay`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(replayResponse.status, 201);
+    const replay = await replayResponse.json();
+    assert.equal(replay.outcome, 'REGRESSION');
+    assert.equal(replay.steps.find((step) => step.id === 'add-item').comparison.differences[0].pointer, '/items/0/lineTotal');
+    const replayParts = replay.runId.split('/');
+    const replayEvidence = await request(`/api/runs/${replayParts[0]}/replays/${replayParts[1]}/evidence`);
+    assert.equal(replayEvidence.status, 200);
+    assert.equal((await replayEvidence.json()).outcome, 'REGRESSION');
+  } finally {
+    await workbench.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
