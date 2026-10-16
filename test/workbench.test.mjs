@@ -78,3 +78,27 @@ test('workbench model preserves six-to-two shrink evidence and accepted/rejected
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('PASS, ignored volatile fields, and INCONCLUSIVE evidence remain distinct', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-outcomes-'));
+  try {
+    const passEvidence = await runScenario(PASS_SCENARIO, path.join(directory, 'pass'));
+    const passModel = buildWorkbenchModel(passEvidence, { scenario: await scenarioAt(PASS_SCENARIO) });
+    assert.equal(passModel.outcome, 'PASS');
+    assert.equal(passModel.mismatch, null);
+    assert.equal(passModel.steps[1].comparison.differences.length, 0);
+    assert.equal(passModel.steps[1].comparison.ignoredDifferences.some((item) => item.pointer === '/cartId'), true);
+
+    const inconclusiveEvidence = await runScenario(REGRESSION_SCENARIO, path.join(directory, 'inconclusive'), {
+      requestTimeoutMs: 20,
+      fixtureOptions: { candidate: { responseDelayMs: 100, responseDelayStep: 'add-item' } },
+    });
+    const inconclusiveModel = buildWorkbenchModel(inconclusiveEvidence, { scenario: await scenarioAt(REGRESSION_SCENARIO) });
+    assert.equal(inconclusiveModel.outcome, 'INCONCLUSIVE');
+    assert.equal(inconclusiveModel.reason.code, 'REQUEST_TIMEOUT');
+    assert.equal(inconclusiveModel.counts.actualReplays, null);
+    assert.equal(inconclusiveModel.steps.find((step) => step.id === 'add-item').candidate.error.code, 'REQUEST_TIMEOUT');
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
