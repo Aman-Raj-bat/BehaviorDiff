@@ -114,7 +114,7 @@ function renderRecentRuns() {
   }
   container.innerHTML = state.runs.slice(0, 8).map((run) => `
     <button class="recent-run" type="button" data-run-id="${escapeHtml(run.runId)}">
-      <span class="run-pill ${outcomeClass(run.outcome)}">${escapeHtml(run.outcome)}</span>
+      <span class="recent-run-top"><span class="run-index">${String(state.runs.indexOf(run) + 1).padStart(2, '0')}</span><span class="run-pill ${outcomeClass(run.outcome)}">${escapeHtml(run.outcome)}</span></span>
       <strong>${display(run.scenarioName)}</strong>
       <small>${display(run.runId)}${run.minimizedStepCount === null ? '' : ` · ${run.minimizedStepCount} steps`}</small>
     </button>
@@ -152,9 +152,10 @@ function serviceCard(service, role) {
     ? '<span class="state-ready">ready</span>'
     : service?.ready === false ? '<span class="state-no">not ready</span>' : '<span class="unavailable">Unavailable</span>';
   return `
-    <div class="service-card">
-      <div><span class="service-name">${fieldValue(service?.fixture)}</span><span class="service-role">${role}</span></div>
+    <div class="service-card ${role === 'reference' ? 'reference-service' : 'candidate-service'}">
+      <div class="service-card-heading"><span class="service-swatch" aria-hidden="true"></span><span class="service-name">${fieldValue(service?.fixture)}</span><span class="service-role">${role}</span></div>
       <div class="service-meta"><span>${readiness}</span><span>reset: ${service?.reset === true ? 'yes' : service?.reset === false ? 'no' : '—'}</span><span>pid: ${fieldValue(service?.pid)}</span></div>
+      <div class="service-url">${fieldValue(service?.baseUrl)}</div>
     </div>
   `;
 }
@@ -165,6 +166,79 @@ function metric(label, value, sub = '', extraClass = '') {
 
 function countValue(value) {
   return value === null || value === undefined ? '<span class="unavailable">—</span>' : escapeHtml(value);
+}
+
+function stepStatus(step) {
+  if (!step) return 'inconclusive';
+  if (step.comparison?.differences?.length) return 'mismatch';
+  if (step.reference?.error || step.candidate?.error) return 'inconclusive';
+  return 'verified';
+}
+
+function stepMethod(step) {
+  return step?.requestTemplate?.method ?? step?.reference?.request?.method ?? '—';
+}
+
+function evidenceRail(model) {
+  const originalSteps = model.reduction?.originalScenario?.steps ?? model.scenarios.original?.steps ?? model.steps ?? [];
+  const finalIds = new Set((model.scenarios.minimized?.steps ?? model.steps ?? []).map((step) => step.id));
+  const recorded = new Map((model.steps ?? []).map((step) => [step.id, step]));
+  if (originalSteps.length === 0) {
+    return `<section class="rail-panel evidence-rail"><div class="rail-panel-heading"><span class="section-index">TRACE</span><h3>Evidence rail</h3></div><div class="notice compact">No scenario steps were recorded.</div></section>`;
+  }
+  return `
+    <section class="rail-panel evidence-rail" aria-label="Scenario evidence rail">
+      <div class="rail-panel-heading"><span class="section-index">TRACE</span><h3>Evidence rail</h3><span class="rail-count">${originalSteps.length} steps</span></div>
+      <p class="rail-panel-note">Same logical scenario, two executable paths.</p>
+      <ol class="evidence-steps">
+        ${originalSteps.map((template, index) => {
+          const step = recorded.get(template.id);
+          const removed = model.reduction && !finalIds.has(template.id);
+          const status = removed ? 'removed' : stepStatus(step);
+          const selected = state.selectedStep === template.id;
+          return `<li class="evidence-step ${status} ${selected ? 'selected' : ''}">
+            ${step ? `<button type="button" data-step-id="${escapeHtml(template.id)}" aria-label="Inspect step ${escapeHtml(template.id)}" aria-current="${selected ? 'step' : 'false'}">` : '<div>'}
+              <span class="evidence-step-index">${String(index + 1).padStart(2, '0')}</span>
+              <span class="evidence-step-body"><strong>${escapeHtml(template.id ?? 'Unnamed step')}</strong><small><b>${escapeHtml(stepMethod(template))}</b> ${escapeHtml(template.request?.path ?? step?.reference?.request?.path ?? 'path unavailable')}</small></span>
+              <span class="evidence-step-signal" aria-label="${status}">${status === 'mismatch' ? 'Δ' : status === 'verified' ? '✓' : status === 'removed' ? '×' : '?'}</span>
+            ${step ? '</button>' : '</div>'}
+            ${index < originalSteps.length - 1 ? '<span class="evidence-connector" aria-hidden="true"></span>' : ''}
+          </li>`;
+        }).join('')}
+      </ol>
+      <div class="rail-legend"><span><i class="legend-dot verified"></i> verified</span><span><i class="legend-dot mismatch"></i> mismatch</span><span><i class="legend-dot removed"></i> removed</span></div>
+    </section>
+  `;
+}
+
+function inlineValue(value) {
+  if (value === undefined) return '<span class="unavailable">Unavailable</span>';
+  if (value && typeof value === 'object' && value.$missing === true) return '<span class="unavailable">&lt;missing&gt;</span>';
+  return `<code>${escapeHtml(JSON.stringify(value))}</code>`;
+}
+
+function mismatchSpecimen(model) {
+  const mismatch = model.mismatch;
+  const step = mismatch ? model.steps?.find((item) => item.id === mismatch.stepId) : null;
+  const difference = step?.comparison?.differences?.find((item) => item.pointer === mismatch.pointer) ?? step?.comparison?.differences?.[0];
+  const stateClass = model.outcome === 'PASS' ? 'verified-specimen' : model.outcome === 'INCONCLUSIVE' ? 'warning-specimen' : 'mismatch-specimen';
+  if (!mismatch || !difference) {
+    return `<section class="specimen ${stateClass}">
+      <div class="specimen-kicker">SPECIMEN / ${model.outcome === 'PASS' ? 'CLEAR' : 'UNAVAILABLE'}</div>
+      <h3>${model.outcome === 'PASS' ? 'No business mismatch recorded.' : 'The target could not be isolated.'}</h3>
+      <p>${model.reason ? `${escapeHtml(model.reason.code ?? 'Run reason')}: ${escapeHtml(model.reason.message ?? 'Evidence is incomplete.')}` : 'No unignored difference is present in the recorded evidence.'}</p>
+    </section>`;
+  }
+  return `<section class="specimen ${stateClass}" aria-label="Exact mismatch specimen">
+    <div class="specimen-topline"><span class="specimen-kicker">SPECIMEN / ${escapeHtml(mismatch.classification)}</span><span class="specimen-step">${escapeHtml(mismatch.stepId)}</span></div>
+    <h3>One field. Two behaviors.</h3>
+    <div class="specimen-reading">
+      <div class="specimen-row reference-row"><span>REFERENCE</span>${inlineValue(difference.reference)}</div>
+      <div class="specimen-row candidate-row"><span>CANDIDATE</span>${inlineValue(difference.candidate)}</div>
+    </div>
+    <div class="specimen-path"><span>PATH</span><code>${escapeHtml(mismatch.pointer)}</code></div>
+    <div class="specimen-caption">Recorded at the first business difference. The values above are not inferred.</div>
+  </section>`;
 }
 
 function targetCard(model) {
@@ -204,8 +278,8 @@ function primitive(value) {
   return `<span>${escapeHtml(JSON.stringify(value))}</span>`;
 }
 
-function jsonTree(value, pointer, depth, differences, ignoredDifferences, label = '') {
-  const marker = differences.has(pointer) ? 'diff-node' : ignoredDifferences.has(pointer) ? 'ignored-node' : '';
+function jsonTree(value, pointer, depth, differences, ignoredDifferences, label = '', side = 'reference') {
+  const marker = differences.has(pointer) ? `diff-node ${side}-diff` : ignoredDifferences.has(pointer) ? 'ignored-node' : '';
   const labelHtml = label ? `<span class="json-key">${escapeHtml(label)}:</span> ` : '';
   if (value === undefined) return `<div class="json-line ${marker}" style="--depth:${depth}">${labelHtml}<span class="unavailable">Unavailable</span></div>`;
   if (value === null || typeof value !== 'object' || value.$missing === true) {
@@ -220,7 +294,7 @@ function jsonTree(value, pointer, depth, differences, ignoredDifferences, label 
   let html = `<div class="json-line ${marker}" style="--depth:${depth}">${labelHtml}<span class="json-punctuation">${open}</span></div>`;
   entries.forEach(([key, child], index) => {
     const childLabel = Array.isArray(value) ? String(key) : String(key);
-    html += jsonTree(child, childPointer(pointer, key), depth + 1, differences, ignoredDifferences, childLabel);
+    html += jsonTree(child, childPointer(pointer, key), depth + 1, differences, ignoredDifferences, childLabel, side);
     if (index < entries.length - 1) {
       // The tree is intentionally line-oriented; commas are visual only and the displayed value remains the evidence body.
       html += `<div class="json-line" style="--depth:${depth + 1}"><span class="json-punctuation">,</span></div>`;
@@ -247,11 +321,11 @@ function responsePane(side, data, differences, ignoredDifferences) {
   const request = data?.request;
   const body = response?.body;
   return `
-    <div class="response-pane">
-      <div class="response-pane-header"><strong>${side === 'reference' ? 'REFERENCE' : 'CANDIDATE'}</strong><span class="status-code ${statusClass}">${status === undefined ? 'HTTP —' : `HTTP ${escapeHtml(status)}`}</span></div>
+    <div class="response-pane ${side === 'reference' ? 'reference-pane' : 'candidate-pane'}">
+      <div class="response-pane-header"><div class="response-title"><span class="response-swatch" aria-hidden="true"></span><strong>${side === 'reference' ? 'REFERENCE' : 'CANDIDATE'}</strong><small>${side === 'reference' ? 'expected behavior' : 'behavior under test'}</small></div><span class="status-code ${statusClass}">${status === undefined ? 'HTTP —' : `HTTP ${escapeHtml(status)}`}</span></div>
       ${request ? `<div class="response-meta"><span>${escapeHtml(request.method ?? 'METHOD —')}</span><span>${escapeHtml(request.path ?? 'Path unavailable')}</span></div>` : ''}
       <div class="response-meta">${responseMetadata(response)}</div>
-      <div class="response-body">${response ? `<div class="json-tree">${jsonTree(body, '', 0, differences, ignoredDifferences)}</div>` : data?.error ? `<div class="unavailable">${escapeHtml(data.error.code ?? 'Replay error')}: ${escapeHtml(data.error.message ?? 'Details unavailable')}</div>` : '<div class="unavailable">Response unavailable</div>'}</div>
+      <div class="response-body">${response ? `<div class="json-tree">${jsonTree(body, '', 0, differences, ignoredDifferences, '', side)}</div>` : data?.error ? `<div class="unavailable">${escapeHtml(data.error.code ?? 'Replay error')}: ${escapeHtml(data.error.message ?? 'Details unavailable')}</div>` : '<div class="unavailable">Response unavailable</div>'}</div>
     </div>
   `;
 }
@@ -287,10 +361,10 @@ function responseComparison(model) {
   const diffPointers = pointerSet(differences.filter((entry) => entry.pointer !== '$status'));
   const ignoredPointers = pointerSet(ignored);
   return `
-    <section class="section">
-      <div class="section-title"><h3>Response comparison</h3><p>Recorded paired responses, not re-created summaries</p></div>
-      <div class="step-tabs">${steps.map((item) => `<button type="button" class="step-tab ${item.id === selected ? 'selected' : ''} ${item.comparison?.differences?.length ? 'has-diff' : ''}" data-step-id="${escapeHtml(item.id)}">${escapeHtml(item.id)}</button>`).join('')}</div>
-      <div class="comparison-head"><strong>${escapeHtml(step.id ?? 'Step unavailable')}</strong><span>expected HTTP ${step.expectedStatus === undefined ? '—' : escapeHtml(step.expectedStatus)}</span></div>
+    <section class="section comparison-section">
+      <div class="section-title"><div><span class="section-index">03 / Paired output</span><h3>Response comparison</h3></div><p>Recorded bodies, not re-created summaries</p></div>
+      <div class="step-tabs" role="tablist" aria-label="Recorded scenario steps">${steps.map((item, index) => `<button type="button" role="tab" aria-selected="${item.id === selected}" class="step-tab ${item.id === selected ? 'selected' : ''} ${item.comparison?.differences?.length ? 'has-diff' : ''}" data-step-id="${escapeHtml(item.id)}"><span>${String(index + 1).padStart(2, '0')}</span>${escapeHtml(item.id)}</button>`).join('')}</div>
+      <div class="comparison-head"><div><span class="comparison-kicker">SELECTED STEP</span><strong>${escapeHtml(step.id ?? 'Step unavailable')}</strong></div><span>expected HTTP ${step.expectedStatus === undefined ? '—' : escapeHtml(step.expectedStatus)}</span></div>
       <div class="response-grid">
         ${responsePane('reference', step.reference, diffPointers, ignoredPointers)}
         ${responsePane('candidate', step.candidate, diffPointers, ignoredPointers)}
@@ -308,21 +382,35 @@ function shrinkChip(label, value) {
 
 function attemptResult(attempt) {
   if (attempt.result === null) return '<span class="attempt-result unavailable">UNAVAILABLE</span>';
-  return `<span class="attempt-result ${attempt.result === 'ACCEPTED' ? 'accepted' : 'rejected'}">${escapeHtml(attempt.result)}</span>`;
+  const kind = attempt.result === 'ACCEPTED'
+    ? 'accepted'
+    : attempt.reason === 'INCONCLUSIVE_REPLAY'
+      ? 'uncertain'
+      : attempt.reason === 'MISMATCH_SIGNATURE_CHANGED' ? 'changed' : 'rejected';
+  return `<span class="attempt-result ${kind}"><i aria-hidden="true"></i>${escapeHtml(attempt.result)}</span>`;
 }
 
 function attemptTable(attempts, available) {
   if (!available) return '<div class="notice">Reduction attempt records are unavailable in this evidence.</div>';
   if (attempts.length === 0) return '<div class="notice">No reduction attempts were recorded. The baseline may have consumed the full budget.</div>';
-  return `<div class="attempts-wrap"><table class="attempt-table"><thead><tr><th>#</th><th>Operation</th><th>Candidate</th><th>Replay</th><th>Decision</th><th>Recorded reason</th></tr></thead><tbody>${attempts.map((attempt) => `
-    <tr>
-      <td><code>${attempt.attempt === null ? '—' : escapeHtml(attempt.attempt)}</code></td>
-      <td><span class="attempt-operation">${display(attempt.operation)}</span><br><code>${display(attempt.location)}</code></td>
-      <td>${attempt.candidateStepCount === null ? '<span class="unavailable">—</span>' : escapeHtml(attempt.candidateStepCount)} steps</td>
-      <td>${attempt.replayed === null ? '<span class="unavailable">Unavailable</span>' : attempt.replayed ? '<span class="state-ready">yes</span>' : '<span class="muted">no</span>'}</td>
-      <td>${attemptResult(attempt)}</td>
-      <td class="attempt-reason">${display(attempt.reason)}${attempt.metadata?.error ? `<br><small>${escapeHtml(attempt.metadata.error)}</small>` : ''}</td>
-    </tr>`).join('')}</tbody></table></div>`;
+  return `<div class="reduction-trace" role="list" aria-label="Actual reduction attempts">${attempts.map((attempt) => {
+    const accepted = attempt.result === 'ACCEPTED';
+    const uncertain = attempt.reason === 'INCONCLUSIVE_REPLAY';
+    const changed = attempt.reason === 'MISMATCH_SIGNATURE_CHANGED';
+    const tone = accepted ? 'accepted' : uncertain ? 'uncertain' : changed ? 'changed' : 'rejected';
+    const operation = display(attempt.operation, 'Operation unavailable');
+    const location = display(attempt.location, 'location unavailable');
+    const candidateSteps = attempt.candidateStepCount === null ? '—' : escapeHtml(attempt.candidateStepCount);
+    const replay = attempt.replayed === null ? 'not recorded' : attempt.replayed ? 'real replay' : 'validation only';
+    return `<article class="trace-row ${tone}" role="listitem">
+      <div class="trace-marker"><span>${attempt.attempt === null ? '—' : escapeHtml(attempt.attempt)}</span></div>
+      <div class="trace-content">
+        <div class="trace-head"><strong>${operation}</strong>${attemptResult(attempt)}</div>
+        <div class="trace-detail"><code>${location}</code><span>${candidateSteps} steps</span><span>${replay}</span></div>
+        <div class="trace-reason">${display(attempt.reason, 'Reason unavailable')}${attempt.metadata?.error ? `<span class="trace-error">${escapeHtml(attempt.metadata.error)}</span>` : ''}</div>
+      </div>
+    </article>`;
+  }).join('')}</div>`;
 }
 
 function shrinkInvestigation(model) {
@@ -334,8 +422,8 @@ function shrinkInvestigation(model) {
     ? '<strong>Minimal under implemented operations.</strong> Greedy step deletion and bounded scalar simplification completed; this is not a proof of a globally optimal minimum.'
     : '<strong>Minimality unavailable.</strong> The evidence does not claim a globally optimal minimum.';
   return `
-    <section class="section">
-      <div class="section-title"><h3>Shrinking investigation</h3><p>Every decision below is copied from reduction evidence</p></div>
+    <section class="section reduction-section">
+      <div class="section-title"><div><span class="section-index">04 / Reduction trace</span><h3>Shrinking investigation</h3></div><p>Every decision below is copied from reduction evidence</p></div>
       <div class="shrink-summary">
         ${shrinkChip('Status', display(reduction.status))}
         ${shrinkChip('Original steps', countValue(reduction.originalStepCount))}
@@ -344,12 +432,12 @@ function shrinkInvestigation(model) {
         ${shrinkChip('Actual replays', countValue(reduction.actualReplays))}
         ${shrinkChip('Accepted operations', countValue(reduction.acceptedOperations))}
       </div>
-      <p class="minimal-note">${minimal}</p>
+      <div class="reduction-callout"><span class="callout-mark">↘</span><p>${minimal}</p></div>
       <div class="scenario-columns">
-        <div class="scenario-panel"><h4>Original scenario · ${original?.steps?.length ?? '—'} steps</h4><pre>${pretty(original)}</pre></div>
-        <div class="scenario-panel"><h4>Minimized scenario · ${minimized?.steps?.length ?? '—'} steps</h4><pre>${pretty(minimized)}</pre></div>
+        <div class="scenario-panel original-scenario"><div class="scenario-panel-heading"><span class="paper-tab">SOURCE</span><h4>Original scenario <small>${original?.steps?.length ?? '—'} steps</small></h4></div><pre>${pretty(original)}</pre></div>
+        <div class="scenario-panel minimized-scenario"><div class="scenario-panel-heading"><span class="paper-tab">VERIFIED</span><h4>Minimized scenario <small>${minimized?.steps?.length ?? '—'} steps</small></h4></div><pre>${pretty(minimized)}</pre></div>
       </div>
-      <div class="section-title" style="margin-top:22px"><h3>Reduction attempts</h3><p>Accepted is not inferred from a changed step count</p></div>
+      <div class="trace-heading"><div><span class="section-index">ATTEMPT LOG</span><h4>Reduction attempts</h4></div><p>Accepted only after target replay</p></div>
       ${attemptTable(reduction.attempts, reduction.attemptsAvailable)}
     </section>
   `;
@@ -362,27 +450,27 @@ function scenarioReplay(model) {
   state.copyPayloads.set('command', model.copyPayloads?.replayCommand);
   state.copyPayloads.set('mismatch', mismatchJson);
   const replayAction = model.scenarios.minimized && model.runId && !model.runId.includes('/')
-    ? `<button class="secondary-button" type="button" data-replay-run="${escapeHtml(model.runId)}">Replay minimized scenario</button>`
+    ? `<button class="secondary-button" type="button" data-replay-run="${escapeHtml(model.runId)}"><span aria-hidden="true">↻</span> Replay minimized scenario</button>`
     : '';
   return `
-    <section class="section">
-      <div class="section-title"><h3>Scenario and replay evidence</h3><p>Portable artifacts from this run</p></div>
-      <div class="heading-actions" style="justify-content:flex-start; margin-bottom:10px">${replayAction}</div>
+    <section class="section replay-section">
+      <div class="section-title"><div><span class="section-index">05 / Provenance</span><h3>Scenario and replay evidence</h3></div><p>Portable artifacts from this run</p></div>
+      <div class="heading-actions replay-actions">${replayAction}</div>
       <div class="scenario-columns">
-        <div class="scenario-panel">
-          <div class="command-head"><strong>Minimized scenario JSON</strong><button class="copy-button" type="button" data-copy="scenario">Copy</button></div>
+        <div class="scenario-panel evidence-paper">
+          <div class="command-head"><strong>Minimized scenario JSON</strong><button class="copy-button" type="button" data-copy="scenario">Copy <span aria-hidden="true">↗</span></button></div>
           <pre>${scenarioJson ? escapeHtml(scenarioJson) : '<span class="unavailable">Unavailable</span>'}</pre>
         </div>
-        <div class="scenario-panel">
-          <div class="command-head"><strong>Target mismatch</strong><button class="copy-button" type="button" data-copy="mismatch" ${mismatchJson ? '' : 'disabled'}>Copy</button></div>
+        <div class="scenario-panel evidence-paper">
+          <div class="command-head"><strong>Target mismatch</strong><button class="copy-button" type="button" data-copy="mismatch" ${mismatchJson ? '' : 'disabled'}>Copy <span aria-hidden="true">↗</span></button></div>
           <pre>${mismatchJson ? escapeHtml(mismatchJson) : '<span class="unavailable">Unavailable</span>'}</pre>
         </div>
       </div>
-      <div class="command-block" style="margin-top:9px">
-        <div class="command-head"><strong>Recorded replay command</strong><button class="copy-button" type="button" data-copy="command" ${model.copyPayloads?.replayCommand ? '' : 'disabled'}>Copy</button></div>
+      <div class="command-block replay-command">
+        <div class="command-head"><strong>Recorded replay command</strong><button class="copy-button" type="button" data-copy="command" ${model.copyPayloads?.replayCommand ? '' : 'disabled'}>Copy <span aria-hidden="true">↗</span></button></div>
         <pre>${model.copyPayloads?.replayCommand ? escapeHtml(model.copyPayloads.replayCommand) : '<span class="unavailable">Unavailable</span>'}</pre>
       </div>
-      ${model.artifacts ? `<div class="artifact-links"><a href="${escapeHtml(model.artifacts.evidence)}" target="_blank" rel="noreferrer">evidence.json</a><a href="${escapeHtml(model.artifacts.minimizedScenario)}" target="_blank" rel="noreferrer">scenario.replay.json</a>${model.artifacts.originalScenario ? `<a href="${escapeHtml(model.artifacts.originalScenario)}" target="_blank" rel="noreferrer">scenario.original.json</a>` : ''}</div>` : '<div class="footer-note">Artifact paths unavailable.</div>'}
+      ${model.artifacts ? `<div class="artifact-links"><span>ARTIFACTS</span><a href="${escapeHtml(model.artifacts.evidence)}" target="_blank" rel="noreferrer">evidence.json ↗</a><a href="${escapeHtml(model.artifacts.minimizedScenario)}" target="_blank" rel="noreferrer">scenario.replay.json ↗</a>${model.artifacts.originalScenario ? `<a href="${escapeHtml(model.artifacts.originalScenario)}" target="_blank" rel="noreferrer">scenario.original.json ↗</a>` : ''}</div>` : '<div class="footer-note">Artifact paths unavailable.</div>'}
     </section>
   `;
 }
@@ -400,8 +488,12 @@ function runDetails(model) {
 }
 
 function renderModel(model) {
+  const sameRun = state.model?.runId && state.model.runId === model.runId;
   state.model = model;
-  state.selectedStep = model.mismatch?.stepId ?? model.steps?.[0]?.id ?? null;
+  state.selectedStep = sameRun && model.steps?.some((step) => step.id === state.selectedStep)
+    ? state.selectedStep
+    : model.mismatch?.stepId ?? model.steps?.[0]?.id ?? null;
+  setTopbarContext(model);
   const outcome = outcomeClass(model.outcome);
   const serviceReference = model.services?.reference;
   const serviceCandidate = model.services?.candidate;
@@ -413,13 +505,13 @@ function renderModel(model) {
   main.innerHTML = `
     <div class="run-view">
       <div class="run-heading">
-        <div>
+        <div class="case-heading">
+          <div class="case-overline"><span class="section-index">CASE / ${escapeHtml(model.runId ?? 'UNNUMBERED')}</span><span class="case-rule"></span><span>${model.reduction ? 'REDUCTION STUDY' : 'PAIRED REPLAY'}</span></div>
           ${outcomeBadge(model.outcome)}
           <h2>${display(model.scenario.name, 'Unnamed scenario')}</h2>
-          <p>${display(serviceReference?.fixture)} <span class="muted">reference</span> <span class="muted">→</span> ${display(serviceCandidate?.fixture)} <span class="muted">candidate</span></p>
-          <div class="run-id">${display(model.runId)}</div>
+          <p class="run-subtitle"><span class="service-inline reference-inline">${display(serviceReference?.fixture)}</span><span>reference</span><span class="route-arrow">→</span><span class="service-inline candidate-inline">${display(serviceCandidate?.fixture)}</span><span>candidate</span></p>
         </div>
-        <div class="heading-actions">${model.outcome === 'REGRESSION' ? '<span class="muted" style="font-size:11px">Business difference recorded</span>' : model.outcome === 'PASS' ? '<span class="muted" style="font-size:11px">No unignored differences recorded</span>' : '<span class="muted" style="font-size:11px">Evidence is incomplete</span>'}</div>
+        <div class="heading-actions"><span class="execution-readout"><i class="readout-led ${outcome}"></i>${model.outcome === 'REGRESSION' ? 'BUSINESS DIFFERENCE RECORDED' : model.outcome === 'PASS' ? 'NO UNIGNORED DIFFERENCES' : 'EVIDENCE INCOMPLETE'}</span><span class="run-id">${display(model.runId)}</span></div>
       </div>
 
       <div class="metric-grid">
@@ -432,13 +524,20 @@ function renderModel(model) {
 
       ${model.reason ? `<div class="notice"><strong>${escapeHtml(model.reason.code ?? 'Run reason')}</strong> — ${escapeHtml(model.reason.message ?? 'The evidence did not include a detail message.')}</div>` : ''}
 
-      <div class="service-strip">${serviceCard(serviceReference, 'reference')} ${serviceCard(serviceCandidate, 'candidate')}</div>
-
-      <div class="investigation-columns">
-        <div>${responseComparison(model)}${shrinkInvestigation(model)}${scenarioReplay(model)}</div>
-        <aside>
-          <section class="section" style="margin-top:0"><div class="section-title"><h3>Mismatch signature</h3><p>Stable target</p></div>${targetCard(model)}</section>
-          <section class="section"><div class="section-title"><h3>Run metadata</h3></div>${runDetails(model)}</section>
+      <div class="lab-layout">
+        <aside class="lab-rail">
+          ${evidenceRail(model)}
+          <section class="rail-panel service-panel"><div class="rail-panel-heading"><span class="section-index">PAIR</span><h3>Execution pair</h3></div><div class="service-stack">${serviceCard(serviceReference, 'reference')}${serviceCard(serviceCandidate, 'candidate')}</div></section>
+          <section class="rail-panel metadata-panel"><div class="rail-panel-heading"><span class="section-index">RECORD</span><h3>Run metadata</h3></div>${runDetails(model)}</section>
+        </aside>
+        <div class="lab-main">
+          ${responseComparison(model)}${shrinkInvestigation(model)}${scenarioReplay(model)}
+        </div>
+        <aside class="lab-aside">
+          <div class="aside-sticky">
+            ${mismatchSpecimen(model)}
+            <section class="section signature-section"><div class="section-title"><div><span class="section-index">TARGET / STABLE</span><h3>Mismatch signature</h3></div></div>${targetCard(model)}</section>
+          </div>
         </aside>
       </div>
       <div class="footer-note">Measured values come from the evidence artifact. “Unavailable” means the runner did not record that field; it is not a success signal.</div>
@@ -469,6 +568,7 @@ async function submitRun(event) {
   const body = { scenario, mode };
   if (mode === 'shrink') body.maxAttempts = Number(maxAttempts.value);
   runButton.disabled = true;
+  runButton.setAttribute('aria-busy', 'true');
   setRunStatus(mode === 'shrink' ? 'Running baseline and verified reductions…' : 'Starting paired replay…');
   try {
     const model = await api('/api/runs', { method: 'POST', body: JSON.stringify(body) });
@@ -480,6 +580,7 @@ async function submitRun(event) {
     setRunStatus(error.message, { error: true });
   } finally {
     runButton.disabled = false;
+    runButton.removeAttribute('aria-busy');
   }
 }
 
@@ -531,12 +632,24 @@ document.addEventListener('click', (event) => {
   if (replayButton) replayMinimized(replayButton.dataset.replayRun);
 });
 
-scenarioSelect.addEventListener('change', () => {
-  state.selectedScenario = scenarioSelect.value;
+function selectScenario(value) {
+  state.selectedScenario = value;
+  scenarioSelect.value = value;
+  topbarScenarioSelect.value = value;
   renderScenarioDetail();
-});
+  setTopbarContext();
+}
+
+scenarioSelect.addEventListener('change', () => selectScenario(scenarioSelect.value));
+topbarScenarioSelect.addEventListener('change', () => selectScenario(topbarScenarioSelect.value));
 runForm.addEventListener('change', updateModeControls);
 runForm.addEventListener('submit', submitRun);
+runForm.addEventListener('keydown', (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+    event.preventDefault();
+    if (!runButton.disabled) runForm.requestSubmit();
+  }
+});
 $('#refresh-runs').addEventListener('click', refreshRuns);
 
 updateModeControls();
