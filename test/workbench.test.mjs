@@ -204,3 +204,34 @@ test('workbench serializes jobs and bounds malformed request bodies', async () =
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('aborting a workbench request cancels the real run and cleans up fixtures', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-cancel-'));
+  const outputRoot = path.join(directory, 'artifacts');
+  const workbench = createWorkbenchServer({ outputRoot });
+  try {
+    const address = await workbench.listen({ port: 0 });
+    const controller = new AbortController();
+    const request = fetch(`${address.url.replace(/\/$/, '')}/api/runs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scenario: 'cart-noisy', mode: 'shrink', maxAttempts: 100 }),
+      signal: controller.signal,
+    });
+    setTimeout(() => controller.abort(), 30);
+    await assert.rejects(request, (error) => error.name === 'AbortError');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const entries = await readdir(outputRoot, { withFileTypes: true });
+    assert.equal(entries.length, 1);
+    const evidence = JSON.parse(await readFile(path.join(outputRoot, entries[0].name, 'evidence.json'), 'utf8'));
+    assert.equal(evidence.outcome, 'INCONCLUSIVE');
+    assert.equal(evidence.reason.code, 'RUN_CANCELLED');
+    for (const service of Object.values(evidence.services)) {
+      if (typeof service.pid !== 'number') continue;
+      assert.throws(() => process.kill(service.pid, 0), (error) => error.code === 'ESRCH');
+    }
+  } finally {
+    await workbench.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
