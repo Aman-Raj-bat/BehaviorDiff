@@ -179,3 +179,28 @@ test('workbench API uses fixed scenarios and performs a real replay action', asy
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('workbench serializes jobs and bounds malformed request bodies', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-hardening-'));
+  const workbench = createWorkbenchServer({ outputRoot: path.join(directory, 'artifacts') });
+  try {
+    const address = await workbench.listen({ port: 0 });
+    const base = address.url.replace(/\/$/, '');
+    const post = (body) => fetch(`${base}/api/runs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body,
+    });
+    const tooLarge = await post(JSON.stringify({ scenario: 'cart-total', mode: 'run', padding: 'x'.repeat(40_000) }));
+    assert.equal(tooLarge.status, 413);
+
+    const first = post(JSON.stringify({ scenario: 'cart-noisy', mode: 'shrink', maxAttempts: 100 }));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const second = await post(JSON.stringify({ scenario: 'cart-total', mode: 'run' }));
+    assert.equal(second.status, 429);
+    await first;
+  } finally {
+    await workbench.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
