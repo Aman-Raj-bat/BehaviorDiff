@@ -84,6 +84,7 @@ async function executeReplay(scenario, handles, requestTimeoutMs, signal) {
     if (resetResult.failure.code === 'RUN_CANCELLED') {
       const error = new Error('Run was cancelled');
       error.code = 'RUN_CANCELLED';
+      error.reset = resetResult.reset;
       throw error;
     }
     return {
@@ -100,7 +101,17 @@ async function executeReplay(scenario, handles, requestTimeoutMs, signal) {
       },
     };
   }
-  const replay = await replayPair({ scenario, services: handles, requestTimeoutMs, signal });
+  let replay;
+  try {
+    replay = await replayPair({ scenario, services: handles, requestTimeoutMs, signal });
+  } catch (error) {
+    // A cancelled, started replay still counts as execution, unlike a failed reset.
+    if (error?.code === 'RUN_CANCELLED') {
+      error.replayed = true;
+      error.reset = resetResult.reset;
+    }
+    throw error;
+  }
   return {
     replayed: true,
     reset: resetResult.reset,
@@ -186,7 +197,7 @@ export async function runScenario(scenarioPath, outputDirectory, options = {}) {
           scenario,
           baseline: initial.execution,
           maxAttempts,
-           evaluate: (candidate) => executeReplay(candidate, handles, requestTimeoutMs, signal),
+          evaluate: (candidate) => executeReplay(candidate, handles, requestTimeoutMs, signal),
         })
         : {
           status: 'BASELINE_NOT_REPRODUCING',
@@ -206,6 +217,7 @@ export async function runScenario(scenarioPath, outputDirectory, options = {}) {
       evidence.reduction = {
         algorithm: 'greedy-step-delete+scalar-v1',
         status: reduction.status,
+        ...(reduction.reason ? { reason: reduction.reason } : {}),
         originalScenarioFile: 'scenario.original.json',
         finalScenarioFile: 'scenario.replay.json',
         maxAttempts,
@@ -224,6 +236,12 @@ export async function runScenario(scenarioPath, outputDirectory, options = {}) {
       };
       finalScenario = reduction.scenario;
       finalExecution = reduction.execution;
+      if (reduction.reason?.code === 'RUN_CANCELLED') {
+        // Keep the last verified best scenario/trace, but never label cancellation as completion.
+        evidence.reason = reduction.reason;
+        evidence.steps = finalExecution.steps;
+        return finalize(evidence, finalScenario, outputDirectory, startedAt, scenario);
+      }
     }
 
     evidence.steps = finalExecution.steps;

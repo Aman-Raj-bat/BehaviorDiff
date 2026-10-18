@@ -111,9 +111,10 @@ async function evaluateCandidate({ candidate, operation, location, metadata, sta
     evaluated = await evaluate(candidate);
   } catch (error) {
     evaluated = {
-      replayed: false,
+      replayed: error?.replayed === true,
+      ...(error?.reset ? { reset: error.reset } : {}),
       fatal: true,
-      reason: { code: 'EVALUATION_ERROR', message: error.message },
+      reason: { code: error?.code === 'RUN_CANCELLED' ? 'RUN_CANCELLED' : 'EVALUATION_ERROR', message: error.message },
     };
   }
   attempt.replayed = evaluated.replayed === true;
@@ -122,13 +123,13 @@ async function evaluateCandidate({ candidate, operation, location, metadata, sta
   if (evaluated.execution) {
     attempt.execution = {
       outcome: evaluated.execution.outcome,
-      reason: evaluated.execution.reason,
+      ...(evaluated.execution.reason ? { reason: evaluated.execution.reason } : {}),
       signature: evaluated.execution.signature,
       steps: evaluated.execution.steps,
     };
   }
 
-  if (evaluated.execution && canTrustCandidate(evaluated.execution, state.target)) {
+  if (attempt.replayed && !evaluated.fatal && evaluated.execution && canTrustCandidate(evaluated.execution, state.target)) {
     attempt.result = 'ACCEPTED';
     attempt.reason = 'TARGET_MISMATCH_REPRODUCED';
     state.attempts.push(attempt);
@@ -139,7 +140,10 @@ async function evaluateCandidate({ candidate, operation, location, metadata, sta
   attempt.reason = evaluated.reason?.code ?? rejectionFor(evaluated.execution, state.target);
   if (evaluated.execution?.reason) attempt.rejectionDetail = evaluated.execution.reason;
   state.attempts.push(attempt);
-  if (evaluated.fatal || isFatalExecution(evaluated.execution)) state.aborted = true;
+  if (evaluated.fatal || isFatalExecution(evaluated.execution)) {
+    state.aborted = true;
+    state.reason = evaluated.reason ?? evaluated.execution?.reason;
+  }
   return { accepted: false, aborted: state.aborted };
 }
 
@@ -227,6 +231,7 @@ export async function shrinkScenario({ scenario, baseline, maxAttempts, evaluate
     attemptLimitReached,
     minimalUnderOperations: !attemptLimitReached && !state.aborted,
     status: state.aborted ? 'ABORTED' : attemptLimitReached ? 'LIMIT_REACHED' : 'COMPLETED',
+    ...(state.reason ? { reason: state.reason } : {}),
   };
 }
 

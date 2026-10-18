@@ -1,4 +1,5 @@
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 export async function writeReplayArtifacts(outputDirectory, scenario, evidence, { originalScenario } = {}) {
@@ -14,9 +15,11 @@ export async function writeReplayArtifacts(outputDirectory, scenario, evidence, 
       if (error.code !== 'ENOENT') throw error;
     });
   }
+  const replayJson = `${JSON.stringify(scenario, null, 2)}\n`;
+  evidence.replay.sha256 = createHash('sha256').update(replayJson).digest('hex');
   await writeFile(
     path.join(outputDirectory, 'scenario.replay.json'),
-    `${JSON.stringify(scenario, null, 2)}\n`,
+    replayJson,
     'utf8',
   );
   await writeFile(
