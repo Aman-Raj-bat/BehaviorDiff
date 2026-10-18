@@ -214,20 +214,13 @@ async function runTrustedScenario({ root, outputRoot, request, signal }) {
   const runId = newRunId(request.mode);
   const directory = artifactDirectory(outputRoot, runId);
   await mkdir(outputRoot, { recursive: true });
-  const evidence = await runScenario(scenarioPath, directory, {
+  await runScenario(scenarioPath, directory, {
     ...(request.startupTimeoutMs === undefined ? {} : { startupTimeoutMs: request.startupTimeoutMs }),
     ...(request.requestTimeoutMs === undefined ? {} : { requestTimeoutMs: request.requestTimeoutMs }),
     ...(signal ? { signal } : {}),
     shrink: request.mode === 'shrink' ? { maxAttempts: request.maxAttempts ?? 100 } : false,
   });
-  return buildWorkbenchModel(evidence, {
-    scenario: await readJsonFile(path.join(directory, 'scenario.replay.json'), 'minimized scenario'),
-    originalScenario: request.mode === 'shrink'
-      ? await readJsonFile(path.join(directory, 'scenario.original.json'), 'original scenario')
-      : null,
-    runId,
-    artifactBase: `/api/runs/${runId}`,
-  });
+  return modelFromDirectory(directory, runId, `/api/runs/${runId}`);
 }
 
 async function replayTrustedScenario({ outputRoot, runId, signal }) {
@@ -240,16 +233,16 @@ async function replayTrustedScenario({ outputRoot, runId, signal }) {
   }
   const replayId = newRunId('replay');
   const replayDirectory = artifactDirectory(path.join(sourceDirectory, 'replays'), replayId);
-  const evidence = await runScenario(
+  await runScenario(
     path.join(sourceDirectory, 'scenario.replay.json'),
     replayDirectory,
     { shrink: false, ...(signal ? { signal } : {}) },
   );
-  return buildWorkbenchModel(evidence, {
-    scenario: await readJsonFile(path.join(replayDirectory, 'scenario.replay.json'), 'replay scenario'),
-    runId: `${runId}/${replayId}`,
-    artifactBase: `/api/runs/${runId}/replays/${replayId}`,
-  });
+  return modelFromDirectory(
+    replayDirectory,
+    `${runId}/${replayId}`,
+    `/api/runs/${runId}/replays/${replayId}`,
+  );
 }
 
 async function serveArtifact(response, filePath, label) {
@@ -299,9 +292,15 @@ export function createWorkbenchServer({
     throw new WorkbenchRequestError('maxConcurrentJobs must be a positive integer');
   }
   let activeJobs = 0;
+  let closing = false;
   const activeControllers = new Set();
   const activeTasks = new Set();
+  function assertAcceptingJobs() {
+    if (closing) throw new WorkbenchRequestError('workbench is closing', 503);
+  }
   async function runJob(task) {
+    // Body reads may have started before close() cancelled the active jobs.
+    assertAcceptingJobs();
     if (activeJobs >= maxConcurrentJobs) {
       throw new WorkbenchRequestError('another workbench run is already in progress', 429);
     }
@@ -338,6 +337,7 @@ export function createWorkbenchServer({
       }
 
       if (url.pathname === '/api/runs' && request.method === 'POST') {
+        assertAcceptingJobs();
         const runRequest = validateRunRequest(await requestBody(request));
         jsonResponse(response, 201, await runRequestJob(
           request,
@@ -394,13 +394,14 @@ export function createWorkbenchServer({
           }
           if (action === 'original-scenario') {
             const evidence = parseEvidence(await readJsonFile(path.join(directory, 'evidence.json'), 'evidence'));
-            if (!evidence.reduction) throw new WorkbenchRequestError('original scenario is unavailable for a non-shrink run', 404);
+            if (!evidence.reduction) throw new WorkbenchRequestError('original scenario is unavailable without a recorded reduction', 404);
             const scenario = await readJsonFile(path.join(directory, 'scenario.original.json'), 'original scenario');
             jsonResponse(response, 200, scenario);
             return;
           }
         }
         if (runPath.length === 2 && action === 'replay' && request.method === 'POST') {
+          assertAcceptingJobs();
           await requestBody(request);
           jsonResponse(response, 201, await runRequestJob(
             request,
@@ -445,6 +446,7 @@ export function createWorkbenchServer({
       };
     },
     async close() {
+      closing = true;
       for (const controller of activeControllers) controller.abort();
       await Promise.allSettled([...activeTasks]);
       if (!server.listening) return;

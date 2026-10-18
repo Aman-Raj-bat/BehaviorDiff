@@ -139,6 +139,7 @@ function reductionView(reduction) {
   return {
     algorithm: optionalString(reduction.algorithm),
     status: optionalString(reduction.status),
+    reason: isRecord(reduction.reason) ? copy(reduction.reason) : null,
     maxAttempts: isInteger(reduction.maxAttempts) ? reduction.maxAttempts : null,
     attemptsUsed: isInteger(reduction.attemptsUsed) ? reduction.attemptsUsed : null,
     actualReplays: isInteger(reduction.actualReplays) ? reduction.actualReplays : null,
@@ -202,6 +203,7 @@ export function buildWorkbenchModel(evidenceInput, {
     replay: {
       command: optionalString(evidence.replay?.command),
       scenarioFile: optionalString(evidence.replay?.scenarioFile),
+      sha256: optionalString(evidence.replay?.sha256),
     },
     scenarios: {
       original: copy(initialScenario) ?? null,
