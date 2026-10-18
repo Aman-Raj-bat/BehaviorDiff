@@ -28,7 +28,10 @@ npm run demo
 `npm test` is the acceptance gate. It starts the fixture implementations as child
 processes on dynamically allocated `127.0.0.1` ports and checks PASS, REGRESSION,
 replay, semantic-ignore, shrinking, signature preservation, attempt limits,
-startup-timeout, request-timeout, and cleanup paths.
+startup-timeout, request-timeout, and cleanup paths. It also covers late failures,
+malformed responses, cancellation during reduction, workbench shutdown/concurrency,
+and the real API shrink/export/replay/PASS-isolation journey. See
+[RELIABILITY.md](RELIABILITY.md) for the reliability audit and verification record.
 
 `npm run demo` runs a noisy six-step scenario and exits successfully after
 performing actual reduction attempts. It prints accepted and rejected attempts,
@@ -75,6 +78,18 @@ Every valid run writes both `evidence.json` and `scenario.replay.json`, includin
 startup and request-timeout runs. The evidence includes service PIDs, loopback
 URLs, resolved requests, response headers and bodies, captures, comparisons,
 ignored volatile differences, and the first business mismatch.
+
+Reference-protocol failures and either-side timeout/transport failures make the
+whole run `INCONCLUSIVE`, even if an earlier step recorded a mismatch. Those
+observed differences remain in the evidence but are not a trusted shrink baseline.
+Candidate-only status, malformed-JSON, and missing-capture regressions retain
+their existing classifications; malformed/capture failures cannot be accepted as
+shrink reproductions.
+
+`scenario.sha256` identifies the original input file bytes. `replay.sha256`
+identifies the exact saved `scenario.replay.json` bytes, which can differ from
+the input after formatting or reduction. Both identities are labeled separately
+in the workbench metadata.
 
 ## Phase 2 stateful shrinking
 
@@ -125,6 +140,14 @@ scenario, validation/replay reason, original and final signatures, and whether t
 attempt limit was reached. `minimalUnderOperations` is true only after the full
 implemented greedy step/scalar search completes without an attempt limit or
 abort. It does not claim global minimality beyond those operations.
+
+`actualReplays` counts started scenario evaluations after successful reset,
+including a replay interrupted by cancellation. A failed or cancelled reset does
+not count as a replay. Cancellation during reduction records `ABORTED` with
+`RUN_CANCELLED`, makes the overall outcome `INCONCLUSIVE`, and preserves the
+last verified best scenario and actual attempt trace without claiming completion.
+Other aborted reductions also retain the last verified best, with the abort
+reason in reduction evidence. The demo exits unsuccessfully for an abort.
 
 The shrink command returns exit code `0` for a verified completed or limit-bounded
 reduction, `2` when the baseline is not a trusted reproducing mismatch or the
@@ -284,6 +307,12 @@ incomplete connections time out after the server's bounded request timeout. If a
 browser request is cancelled or the workbench receives SIGINT/SIGTERM, the active
 run is cancelled and the fixture processes are cleaned up through the normal
 runner `finally` path.
+
+Shutdown rejects job admission with HTTP 503, including requests whose bodies
+were still arriving when shutdown began. Startup/reset failure before reduction
+returns the real `INCONCLUSIVE` model; reduction measurements and the separate
+original-scenario artifact are explicitly unavailable because reduction did not
+start. The replay artifact still contains the input scenario.
 
 The UI deliberately labels unavailable fields instead of estimating them. In a
 shrink run, `minimalUnderOperations` means the implemented greedy step deletion
