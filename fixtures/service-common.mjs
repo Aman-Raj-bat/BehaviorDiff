@@ -78,9 +78,6 @@ export function createCartService({ fixture, variant }) {
     if (responseDelayMs > 0 && (!responseDelayStep || responseDelayStep === stepName) && (!quantitySpecific || body?.quantity === timeoutOnQuantity)) {
       await new Promise((resolve) => setTimeout(resolve, responseDelayMs));
     }
-    if (stepName === 'add-item' && timeoutOnQuantity !== undefined && body?.quantity === timeoutOnQuantity) {
-      await new Promise((resolve) => setTimeout(resolve, responseDelayMs));
-    }
   }
 
   function requestId() {

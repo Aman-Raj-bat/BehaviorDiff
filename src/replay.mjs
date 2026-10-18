@@ -24,6 +24,11 @@ function errorRecord(error, diagnostics = {}) {
     code: error.code ?? 'REPLAY_ERROR',
     message: error.message,
     ...(error.timeoutMs === undefined ? {} : { timeoutMs: error.timeoutMs }),
+    ...(error.status === undefined ? {} : { status: error.status }),
+    ...(typeof error.rawBody === 'string' ? {
+      rawBody: error.rawBody.slice(0, MAX_DIAGNOSTIC_BYTES),
+      rawBodyTruncated: error.rawBodyTruncated === true || error.rawBody.length > MAX_DIAGNOSTIC_BYTES,
+    } : {}),
     ...(Object.keys(diagnostics).length === 0 ? {} : { diagnostics }),
   };
 }
@@ -95,7 +100,7 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
             stepId: step.id,
             message: wrapped.message,
           };
-          regression ||= side === 'candidate';
+          regression = side === 'candidate';
         }
       }
     }
@@ -161,41 +166,43 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
     const referenceError = sideData.reference.result?.error;
     const candidateError = sideData.candidate.result?.error;
     if (referenceError || candidateError) {
+      // Incomplete paired evidence supersedes any mismatch observed earlier.
+      regression = false;
       if (referenceError && isReferenceBlocking(referenceError)) {
         reason = {
+          ...errorRecord(referenceError, diagnosticRecord(services, 'reference')),
           code: referenceError.code === 'NON_JSON_RESPONSE' ? 'REFERENCE_NON_JSON' : referenceError.code,
           side: 'reference',
           stepId: step.id,
-          ...errorRecord(referenceError, diagnosticRecord(services, 'reference')),
         };
       } else if (candidateError && (candidateError.code === 'REQUEST_TIMEOUT' || candidateError.code === 'TRANSPORT_ERROR')) {
         reason = {
+          ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
           code: candidateError.code,
           side: 'candidate',
           stepId: step.id,
-          ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
         };
       } else if (candidateError?.code === 'NON_JSON_RESPONSE') {
         reason = {
+          ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
           code: 'CANDIDATE_NON_JSON',
           side: 'candidate',
           stepId: step.id,
-          ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
         };
         regression = true;
       } else if (referenceError) {
         reason = {
+          ...errorRecord(referenceError, diagnosticRecord(services, 'reference')),
           code: 'REFERENCE_REPLAY_ERROR',
           side: 'reference',
           stepId: step.id,
-          ...errorRecord(referenceError, diagnosticRecord(services, 'reference')),
         };
       } else {
         reason = {
+          ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
           code: 'CANDIDATE_REPLAY_ERROR',
           side: 'candidate',
           stepId: step.id,
-          ...errorRecord(candidateError, diagnosticRecord(services, 'candidate')),
         };
         regression = true;
       }
@@ -222,6 +229,7 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
         ignoredDifferences: bodyComparison.ignoredDifferences,
       };
       if (referenceResponse.status !== step.expect.status) {
+        regression = false;
         reason = {
           code: 'REFERENCE_UNEXPECTED_STATUS',
           side: 'reference',
@@ -248,6 +256,7 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
     }
 
     if (sideData.reference.captureError) {
+      regression = false;
       reason = {
         code: 'REFERENCE_CAPTURE_MISSING',
         side: 'reference',
@@ -272,5 +281,17 @@ export async function replayPair({ scenario, services, requestTimeoutMs, signal 
     steps.push(entry);
   }
 
+  // Candidate protocol/status exits must not mask an invalid reference capture
+  // recorded on that same paired step. Keep both sides' actual observations.
+  const lastStep = steps.at(-1);
+  if (lastStep?.reference.captureError && reason?.side !== 'reference') {
+    regression = false;
+    reason = {
+      code: 'REFERENCE_CAPTURE_MISSING',
+      side: 'reference',
+      stepId: lastStep.id,
+      pointer: lastStep.reference.captureError.pointer,
+    };
+  }
   return { steps, reason, regression };
 }

@@ -147,6 +147,16 @@ test('noisy stateful scenarios shrink through real replays and preserve the targ
     for (const attempt of evidence.reduction.attempts.filter((item) => item.replayed)) {
       assert.deepEqual(attempt.reset, { reference: true, candidate: true });
     }
+    const accepted = evidence.reduction.attempts.filter((attempt) => attempt.result === 'ACCEPTED');
+    assert.equal(evidence.reduction.acceptedOperations, accepted.length);
+    for (const attempt of accepted) {
+      assert.equal(attempt.replayed, true);
+      assert.equal(attempt.execution.outcome, 'REGRESSION');
+      assert.deepEqual(attempt.execution.signature, evidence.reduction.originalMismatchSignature);
+      assert.ok(!attempt.execution.reason || attempt.execution.reason.code === 'CANDIDATE_UNEXPECTED_STATUS');
+    }
+    assert.deepEqual(JSON.parse(await readFile(path.join(output, 'scenario.original.json'), 'utf8')), evidence.reduction.originalScenario);
+    assert.deepEqual(JSON.parse(await readFile(path.join(output, 'scenario.replay.json'), 'utf8')), evidence.reduction.finalScenario);
     assert.equal(evidence.reduction.attempts.some((attempt) => attempt.result === 'ACCEPTED'), true);
     assert.equal(evidence.reduction.attempts.some((attempt) => attempt.result === 'ACCEPTED' && attempt.operation === 'SIMPLIFY_ARRAY'), true);
     assert.equal(evidence.reduction.attempts.some((attempt) => attempt.result === 'ACCEPTED' && attempt.operation === 'SIMPLIFY_OBJECT'), true);

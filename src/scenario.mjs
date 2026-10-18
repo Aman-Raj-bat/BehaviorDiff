@@ -175,8 +175,10 @@ export function captureValues(step, body, variables) {
       if (current === undefined) break;
     }
     if (current === undefined) return { error: { name, pointer } };
-    variables[name] = current;
-    captures[name] = current;
+    // Define own data properties so allowed names such as __proto__ never invoke setters.
+    const descriptor = { value: current, writable: true, enumerable: true, configurable: true };
+    Object.defineProperty(variables, name, descriptor);
+    Object.defineProperty(captures, name, descriptor);
   }
   return { captures };
 }
