@@ -176,7 +176,7 @@ function stepStatus(step) {
 }
 
 function stepMethod(step) {
-  return step?.requestTemplate?.method ?? step?.reference?.request?.method ?? '—';
+  return step?.request?.method ?? step?.requestTemplate?.method ?? step?.reference?.request?.method ?? '—';
 }
 
 function evidenceRail(model) {
@@ -482,7 +482,8 @@ function runDetails(model) {
     <div><dt>Evidence schema</dt><dd>${model.raw?.schemaVersion === undefined ? '<span class="unavailable">Unavailable</span>' : escapeHtml(model.raw.schemaVersion)}</dd></div>
     <div><dt>Started</dt><dd>${display(run.startedAt)}</dd></div>
     <div><dt>Duration</dt><dd>${run.durationMs === undefined ? '<span class="unavailable">Unavailable</span>' : `${escapeHtml(run.durationMs)} ms`}</dd></div>
-    <div><dt>Scenario SHA-256</dt><dd>${display(model.scenario.sha256)}</dd></div>
+    <div><dt>Input scenario SHA-256</dt><dd>${display(model.scenario.sha256)}</dd></div>
+    <div><dt>Replay scenario SHA-256</dt><dd>${display(model.replay?.sha256)}</dd></div>
     <div><dt>Exit code</dt><dd>${model.exitCode === null ? '<span class="unavailable">Unavailable</span>' : escapeHtml(model.exitCode)}</dd></div>
   </dl>`;
 }

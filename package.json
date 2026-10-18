@@ -8,7 +8,7 @@
     "node": ">=22.0.0 <23"
   },
   "scripts": {
-    "test": "node --test test/behavior-diff.test.mjs test/workbench.test.mjs",
+    "test": "node --test test/behavior-diff.test.mjs test/core-reliability.test.mjs test/demo-reliability.test.mjs test/shrink-reliability.test.mjs test/workbench.test.mjs",
     "demo": "node scripts/demo.mjs",
     "workbench": "node bin/behavior-diff-workbench.mjs"
   },
