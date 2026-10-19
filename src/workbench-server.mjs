@@ -256,6 +256,8 @@ async function serveArtifact(response, filePath, label) {
 
 const STATIC_FILES = Object.freeze({
   '/': ['public/index.html', 'text/html; charset=utf-8'],
+  '/lab': ['public/lab.html', 'text/html; charset=utf-8'],
+  '/lab/': ['public/lab.html', 'text/html; charset=utf-8'],
   '/app.js': ['public/app.js', 'text/javascript; charset=utf-8'],
   '/styles.css': ['public/styles.css', 'text/css; charset=utf-8'],
 });
