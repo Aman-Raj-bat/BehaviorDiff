@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="BehaviorDiff local evidence investigation workbench">
+    <meta name="theme-color" content="#101316">
+    <title>BehaviorDiff — Evidence Lab</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body class="lab-page">
+    <a class="skip-link" href="#main-content">Skip to Evidence Lab</a>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="wordmark" href="/" aria-label="BehaviorDiff workbench home">
+          <span class="wordmark-mark" aria-hidden="true">
+            <span class="mark-track mark-track-one"></span>
+            <span class="mark-track mark-track-two"></span>
+            <span class="mark-node mark-node-one"></span>
+            <span class="mark-node mark-node-two"></span>
+            <span class="mark-node mark-node-diff"></span>
+          </span>
+          <span class="wordmark-copy">
+            <strong>BEHAVIOR<span>DIFF</span></strong>
+            <small>EVIDENCE LAB / LOCAL INSTRUMENT</small>
+          </span>
+        </a>
+        <div class="topbar-center">
+          <span class="topbar-status"><i class="status-led" aria-hidden="true"></i>LOOPBACK ONLY</span>
+          <span class="topbar-divider" aria-hidden="true"></span>
+          <label class="topbar-scenario">
+            <span>CASE</span>
+            <select id="topbar-scenario-select" aria-label="Current trusted scenario">
+              <option value="">Loading…</option>
+            </select>
+          </label>
+        </div>
+        <div id="topbar-context" class="topbar-context" aria-live="polite">
+          <span>READY / NO RUN LOADED</span>
+          <strong>SELECT A TRUSTED CASE</strong>
+        </div>
+      </header>
+
+      <main id="main-content" class="main-content" tabindex="-1">
+        <div class="lab-layout">
+          <aside class="control-column" aria-label="Investigation controls">
+            <section class="command-deck" aria-label="Scenario and execution controls">
+              <div class="deck-heading">
+                <div>
+                  <span class="eyebrow">Execution deck</span>
+                  <h1>Run a trusted comparison.</h1>
+                </div>
+                <p class="deck-boundary"><i class="boundary-dot" aria-hidden="true"></i><span>Checked-in scenarios<br>and local fixtures only</span></p>
+              </div>
+
+              <form id="run-form" class="run-form">
+                <div class="toolbar-field scenario-field">
+                  <label for="scenario-select" class="control-label">Scenario</label>
+                  <select id="scenario-select" name="scenario" required>
+                    <option value="">Loading scenarios…</option>
+                  </select>
+                  <div id="scenario-detail" class="scenario-detail" aria-live="polite"></div>
+                </div>
+
+                <fieldset class="mode-fieldset">
+                  <legend>Investigation mode</legend>
+                  <label class="mode-option">
+                    <input type="radio" name="mode" value="run" checked>
+                    <span><strong>Compare</strong><small>Paired response run</small></span>
+                  </label>
+                  <label class="mode-option">
+                    <input type="radio" name="mode" value="shrink">
+                    <span><strong>Shrink</strong><small>Verified reduction trace</small></span>
+                  </label>
+                </fieldset>
+
+                <div class="toolbar-field budget-field">
+                  <label for="max-attempts" class="control-label">Attempt budget</label>
+                  <input id="max-attempts" name="maxAttempts" type="number" min="1" max="10000" value="100" disabled>
+                  <small>Used only in shrink mode</small>
+                </div>
+
+                <button id="run-button" class="primary-button" type="submit">
+                  <span class="button-index" aria-hidden="true">→</span>
+                  <span>Run investigation</span>
+                  <span class="button-key" aria-hidden="true">⌘↵</span>
+                </button>
+                <div id="run-status" class="form-status" aria-live="polite"></div>
+              </form>
+
+              <section class="recent-section" aria-label="Recent runs">
+                <div class="section-heading">
+                  <div><span class="eyebrow">Recent evidence</span><span class="recent-count">Last completed runs</span></div>
+                  <button id="refresh-runs" class="text-button" type="button">Reload</button>
+                </div>
+                <div id="recent-runs" class="recent-runs"><span class="muted">No runs loaded.</span></div>
+              </section>
+            </section>
+          </aside>
+
+          <section class="workspace-column" aria-labelledby="workspace-heading">
+            <h1 id="workspace-heading" class="visually-hidden">Evidence investigation workspace</h1>
+            <section id="empty-state" class="empty-state" aria-label="Evidence Lab introduction">
+              <div class="empty-copy">
+                <span class="empty-kicker">Evidence Lab / Ready</span>
+                <h2>Make a behavior mismatch legible.</h2>
+                <p>Run the same stateful scenario through two local implementations. The lab keeps the real responses, isolates the first differing field, and verifies every reduction.</p>
+              </div>
+              <div class="empty-sequence" aria-label="Investigation sequence">
+                <div><span class="empty-number">01</span><strong>Detect</strong><small>Compare actual response bodies.</small></div>
+                <div><span class="empty-number">02</span><strong>Isolate</strong><small>Pin the first business difference.</small></div>
+                <div><span class="empty-number">03</span><strong>Prove</strong><small>Replay only what the evidence supports.</small></div>
+              </div>
+            </section>
+            <div id="run-view" hidden></div>
+          </section>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
