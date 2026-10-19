@@ -226,20 +226,21 @@ function mismatchSpecimen(model) {
   const stateClass = model.outcome === 'PASS' ? 'verified-specimen' : model.outcome === 'INCONCLUSIVE' ? 'warning-specimen' : 'mismatch-specimen';
   if (!mismatch || !difference) {
     return `<section class="specimen ${stateClass}">
-      <div class="specimen-kicker">SPECIMEN / ${model.outcome === 'PASS' ? 'CLEAR' : 'UNAVAILABLE'}</div>
+      <div class="specimen-topline"><span class="specimen-kicker">FINDING / ${model.outcome === 'PASS' ? 'CLEAR' : 'UNAVAILABLE'}</span><span class="specimen-step">${escapeHtml(model.outcome)}</span></div>
       <h3>${model.outcome === 'PASS' ? 'No business mismatch recorded.' : 'The target could not be isolated.'}</h3>
       <p>${model.reason ? `${escapeHtml(model.reason.code ?? 'Run reason')}: ${escapeHtml(model.reason.message ?? 'Evidence is incomplete.')}` : 'No unignored difference is present in the recorded evidence.'}</p>
     </section>`;
   }
   return `<section class="specimen ${stateClass}" aria-label="Exact mismatch specimen">
-    <div class="specimen-topline"><span class="specimen-kicker">SPECIMEN / ${escapeHtml(mismatch.classification)}</span><span class="specimen-step">${escapeHtml(mismatch.stepId)}</span></div>
+    <div class="specimen-topline"><span class="specimen-kicker">FINDING / ${escapeHtml(mismatch.classification)}</span><span class="specimen-step">step · ${escapeHtml(mismatch.stepId)}</span></div>
     <h3>One field. Two behaviors.</h3>
     <div class="specimen-reading">
       <div class="specimen-row reference-row"><span>REFERENCE</span>${inlineValue(difference.reference)}</div>
+      <span class="specimen-arrow" aria-hidden="true">→</span>
       <div class="specimen-row candidate-row"><span>CANDIDATE</span>${inlineValue(difference.candidate)}</div>
     </div>
-    <div class="specimen-path"><span>PATH</span><code>${escapeHtml(mismatch.pointer)}</code></div>
-    <div class="specimen-caption">Recorded at the first business difference. The values above are not inferred.</div>
+    <div class="specimen-path"><span>JSON POINTER</span><code>${escapeHtml(mismatch.pointer)}</code></div>
+    <div class="specimen-caption">The values above are copied from the recorded response bodies. No estimate or summary substituted.</div>
   </section>`;
 }
 
@@ -349,7 +350,7 @@ function diffPanel(title, differences, className = '') {
 function responseComparison(model) {
   const steps = model.steps ?? [];
   if (steps.length === 0) {
-    return `<section class="section"><div class="section-title"><h3>Response comparison</h3></div><div class="notice">No paired response steps were recorded. This run is ${escapeHtml(model.outcome)}; response bodies are unavailable.</div></section>`;
+    return `<section class="section"><div class="section-title"><h3>Reference vs candidate</h3></div><div class="notice">No paired response steps were recorded. This run is ${escapeHtml(model.outcome)}; response bodies are unavailable.</div></section>`;
   }
   const mismatchStep = model.mismatch?.stepId;
   const selected = state.selectedStep && steps.some((step) => step.id === state.selectedStep)
@@ -364,7 +365,7 @@ function responseComparison(model) {
   const ignoredPointers = pointerSet(ignored);
   return `
     <section class="section comparison-section">
-      <div class="section-title"><div><span class="section-index">03 / Paired output</span><h3>Response comparison</h3></div><p>Recorded bodies, not re-created summaries</p></div>
+      <div class="section-title"><div><span class="section-index">Compare / first view</span><h3>Reference vs candidate</h3></div><p>Recorded bodies, not re-created summaries</p></div>
       <div class="step-tabs" role="tablist" aria-label="Recorded scenario steps">${steps.map((item, index) => `<button type="button" role="tab" aria-selected="${item.id === selected}" class="step-tab ${item.id === selected ? 'selected' : ''} ${item.comparison?.differences?.length ? 'has-diff' : ''}" data-step-id="${escapeHtml(item.id)}"><span>${String(index + 1).padStart(2, '0')}</span>${escapeHtml(item.id)}</button>`).join('')}</div>
       <div class="comparison-head"><div><span class="comparison-kicker">SELECTED STEP</span><strong>${escapeHtml(step.id ?? 'Step unavailable')}</strong></div><span>expected HTTP ${step.expectedStatus === undefined ? '—' : escapeHtml(step.expectedStatus)}</span></div>
       <div class="response-grid">
@@ -415,6 +416,38 @@ function attemptTable(attempts, available) {
   }).join('')}</div>`;
 }
 
+function reductionOverview(reduction, original, minimized) {
+  const originalSteps = Array.isArray(original?.steps) ? original.steps : [];
+  const minimizedSteps = Array.isArray(minimized?.steps) ? minimized.steps : [];
+  const minimizedIds = new Set(minimizedSteps.map((step) => step.id));
+  const retained = originalSteps.filter((step) => minimizedIds.has(step.id));
+  const removed = originalSteps.filter((step) => !minimizedIds.has(step.id));
+  const originalCount = reduction.originalStepCount;
+  const finalCount = reduction.finalStepCount;
+  const fill = Number.isInteger(originalCount) && originalCount > 0 && Number.isInteger(finalCount)
+    ? Math.max(0, Math.min(100, (finalCount / originalCount) * 100))
+    : null;
+  const signature = reduction.finalMismatchSignature ?? reduction.originalMismatchSignature;
+  const stepList = (steps, emptyLabel) => steps.length > 0
+    ? steps.map((step) => `<code>${escapeHtml(step.id ?? 'Unnamed step')}</code>`).join('')
+    : `<span class="unavailable">${emptyLabel}</span>`;
+  return `
+    <div class="reduction-overview" aria-label="Evidence-backed reduction summary">
+      <div class="reduction-counts">
+        <div class="reduction-count original-count"><span>ORIGINAL</span><strong>${countValue(originalCount)}</strong><small>source sequence</small></div>
+        <div class="reduction-arrow" aria-hidden="true">→</div>
+        <div class="reduction-count final-count"><span>MINIMIZED</span><strong>${countValue(finalCount)}</strong><small>verified best</small></div>
+      </div>
+      <div class="reduction-bar" aria-label="${originalCount === null || finalCount === null ? 'Reduction size unavailable' : `${finalCount} of ${originalCount} steps retained`}" ${fill === null ? '' : `style="--reduction-fill: ${fill}%"`}><span></span></div>
+      <div class="reduction-step-lists">
+        <div><span>RETAINED / ${retained.length}</span><div>${stepList(retained, 'No retained steps recorded')}</div></div>
+        <div><span>REMOVED / ${removed.length}</span><div>${stepList(removed, 'No removed steps recorded')}</div></div>
+      </div>
+      <div class="reduction-signature"><span>TARGET MISMATCH SIGNATURE</span><code>${signature ? `${escapeHtml(signature.stepId)} · ${escapeHtml(signature.pointer)} · ${escapeHtml(signature.classification)}` : 'Unavailable'}</code></div>
+    </div>
+  `;
+}
+
 function shrinkInvestigation(model) {
   const reduction = model.reduction;
   if (!reduction) return '';
@@ -424,16 +457,19 @@ function shrinkInvestigation(model) {
     ? '<strong>Minimal under implemented operations.</strong> Greedy step deletion and bounded scalar simplification completed; this is not a proof of a globally optimal minimum.'
     : '<strong>Minimality unavailable.</strong> The evidence does not claim a globally optimal minimum.';
   return `
-    <section class="section reduction-section">
-      <div class="section-title"><div><span class="section-index">04 / Reduction trace</span><h3>Shrinking investigation</h3></div><p>Every decision below is copied from reduction evidence</p></div>
+    <section id="reduction-evidence" class="section reduction-section">
+      <div class="section-title"><div><span class="section-index">Reduction trace</span><h3>${countValue(reduction.originalStepCount)} steps → ${countValue(reduction.finalStepCount)}</h3></div><p>Every decision below is copied from reduction evidence</p></div>
       <div class="shrink-summary">
         ${shrinkChip('Status', display(reduction.status))}
         ${shrinkChip('Original steps', countValue(reduction.originalStepCount))}
         ${shrinkChip('Final steps', countValue(reduction.finalStepCount))}
         ${shrinkChip('Attempts used', reduction.attemptsUsed === null || reduction.maxAttempts === null ? '<span class="unavailable">—</span>' : `${escapeHtml(reduction.attemptsUsed)} / ${escapeHtml(reduction.maxAttempts)}`)}
+        ${shrinkChip('Attempt limit', countValue(reduction.maxAttempts))}
         ${shrinkChip('Actual replays', countValue(reduction.actualReplays))}
         ${shrinkChip('Accepted operations', countValue(reduction.acceptedOperations))}
+        ${shrinkChip('Rejected operations', reduction.attemptsAvailable ? countValue(reduction.attempts.filter((attempt) => attempt.result === 'REJECTED').length) : '<span class="unavailable">—</span>')}
       </div>
+      ${reductionOverview(reduction, original, minimized)}
       <div class="reduction-callout"><span class="callout-mark">↘</span><p>${minimal}</p></div>
       <div class="scenario-columns">
         <div class="scenario-panel original-scenario"><div class="scenario-panel-heading"><span class="paper-tab">SOURCE</span><h4>Original scenario <small>${original?.steps?.length ?? '—'} steps</small></h4></div><pre>${pretty(original)}</pre></div>
@@ -452,15 +488,16 @@ function scenarioReplay(model) {
   state.copyPayloads.set('command', model.copyPayloads?.replayCommand);
   state.copyPayloads.set('mismatch', mismatchJson);
   const replayAction = model.scenarios.minimized && model.runId && !model.runId.includes('/')
-    ? `<button class="secondary-button" type="button" data-replay-run="${escapeHtml(model.runId)}"><span aria-hidden="true">↻</span> Replay minimized scenario</button>`
+    ? `<button class="secondary-button" type="button" data-replay-run="${escapeHtml(model.runId)}"><span aria-hidden="true">↻</span> ${model.reduction ? 'Replay minimized scenario' : 'Replay recorded scenario'}</button>`
     : '';
+  const scenarioLabel = model.reduction ? 'Minimized scenario JSON' : 'Recorded scenario JSON';
   return `
-    <section class="section replay-section">
-      <div class="section-title"><div><span class="section-index">05 / Provenance</span><h3>Scenario and replay evidence</h3></div><p>Portable artifacts from this run</p></div>
+    <section id="replay-evidence" class="section replay-section">
+      <div class="section-title"><div><span class="section-index">Replay proof</span><h3>Scenario and replay evidence</h3></div><p>Portable artifacts from this run</p></div>
       <div class="heading-actions replay-actions">${replayAction}</div>
       <div class="scenario-columns">
         <div class="scenario-panel evidence-paper">
-          <div class="command-head"><strong>Minimized scenario JSON</strong><button class="copy-button" type="button" data-copy="scenario">Copy <span aria-hidden="true">↗</span></button></div>
+           <div class="command-head"><strong>${scenarioLabel}</strong><button class="copy-button" type="button" data-copy="scenario">Copy <span aria-hidden="true">↗</span></button></div>
           <pre>${scenarioJson ? escapeHtml(scenarioJson) : '<span class="unavailable">Unavailable</span>'}</pre>
         </div>
         <div class="scenario-panel evidence-paper">
@@ -491,15 +528,13 @@ function runDetails(model) {
 }
 
 function investigationProgress(model) {
-  const hasMismatch = Boolean(model.mismatch && model.difference);
-  const reduction = Boolean(model.reduction);
-  const reductionComplete = Boolean(reduction && model.counts?.minimizedStepCount != null);
-  const hasResponses = Boolean(model.recordedResponses?.length);
-  const reductionDetail = reductionComplete
-    ? `${escapeHtml(model.counts.originalStepCount)} → ${escapeHtml(model.counts.minimizedStepCount)} steps retained`
-    : reduction
-      ? 'Reduction in progress'
-      : 'Not requested for this run';
+  const hasResponses = (model.steps ?? []).length > 0;
+  const hasMismatch = Boolean(model.mismatch);
+  const reduction = model.reduction;
+  const reductionComplete = reduction && ['COMPLETED', 'LIMIT_REACHED'].includes(reduction.status);
+  const reductionDetail = reduction
+    ? `${countValue(reduction.finalStepCount)} of ${countValue(reduction.originalStepCount)} steps · ${escapeHtml(reduction.status ?? 'status unavailable')}`
+    : 'Not requested for this run';
   const replayedModel = model.runId?.includes('/') === true;
   const replayDetail = replayedModel
     ? `Independent replay returned ${escapeHtml(model.outcome)}`
@@ -562,7 +597,7 @@ function renderModel(model) {
     : countValue(model.counts.minimizedStepCount);
   const stepCountSub = model.reduction ? 'original → minimized' : 'recorded scenario steps';
   const replaySub = model.counts.actualReplays === null ? 'not recorded' : 'real HTTP evaluations';
-  main.innerHTML = `
+  runView.innerHTML = `
     <div class="run-view">
       <div class="run-heading">
         <div class="case-heading">
@@ -578,31 +613,45 @@ function renderModel(model) {
         ${metric('Outcome', `<span class="${outcome}">${escapeHtml(model.outcome)}</span>`, `exit ${model.exitCode === null ? '—' : escapeHtml(model.exitCode)}`)}
         ${metric(model.reduction ? 'Steps' : 'Scenario steps', stepCountLabel, stepCountSub)}
         ${metric('Actual replays', countValue(model.counts.actualReplays), replaySub)}
-        ${metric(model.reduction ? 'Shrink attempts' : 'Shrink attempts', countValue(model.counts.attemptsUsed), model.reduction ? 'budget includes baseline' : 'not run')}
-        ${metric('Target', model.mismatch ? `<code>${display(model.mismatch.pointer)}</code>` : '<span class="unavailable">Unavailable</span>', model.mismatch ? display(model.mismatch.stepId) : 'no mismatch signature', 'target')}
+        ${metric('Mismatch target', model.mismatch ? `<code>${display(model.mismatch.pointer)}</code>` : '<span class="unavailable">Unavailable</span>', model.mismatch ? display(model.mismatch.stepId) : 'no mismatch signature', 'target')}
       </div>
 
       ${model.reason ? `<div class="notice"><strong>${escapeHtml(model.reason.code ?? 'Run reason')}</strong> — ${escapeHtml(model.reason.message ?? 'The evidence did not include a detail message.')}</div>` : ''}
 
-      <div class="lab-layout">
-        <aside class="lab-rail">
-          ${evidenceRail(model)}
-          <section class="rail-panel service-panel"><div class="rail-panel-heading"><span class="section-index">PAIR</span><h3>Execution pair</h3></div><div class="service-stack">${serviceCard(serviceReference, 'reference')}${serviceCard(serviceCandidate, 'candidate')}</div></section>
-          <section class="rail-panel metadata-panel"><div class="rail-panel-heading"><span class="section-index">RECORD</span><h3>Run metadata</h3></div>${runDetails(model)}</section>
-        </aside>
-        <div class="lab-main">
-          ${responseComparison(model)}${shrinkInvestigation(model)}${scenarioReplay(model)}
+      ${investigationProgress(model)}
+
+      <section class="primary-layout" aria-label="Primary comparison workspace">
+        <div class="primary-canvas">
+          <div class="workspace-kicker"><span class="section-index">Primary investigation</span><span>Finding first · response proof below</span></div>
+          ${mismatchSpecimen(model)}
+          ${responseComparison(model)}
         </div>
-        <aside class="lab-aside">
-          <div class="aside-sticky">
-            ${mismatchSpecimen(model)}
-            <section class="section signature-section"><div class="section-title"><div><span class="section-index">TARGET / STABLE</span><h3>Mismatch signature</h3></div></div>${targetCard(model)}</section>
-          </div>
+        <aside class="supporting-column primary-support">
+          <section class="signature-card" aria-label="Stable mismatch signature">
+            <span class="section-index">Target / stable</span>
+            <h3>Mismatch signature</h3>
+            ${targetCard(model)}
+          </section>
+          <section class="rail-panel service-panel"><div class="rail-panel-heading"><span class="section-index">Pair</span><h3>Execution pair</h3></div><div class="service-stack">${serviceCard(serviceReference, 'reference')}${serviceCard(serviceCandidate, 'candidate')}</div></section>
+          <section class="rail-panel metadata-panel"><div class="rail-panel-heading"><span class="section-index">Record</span><h3>Run metadata</h3></div>${runDetails(model)}</section>
         </aside>
-      </div>
+      </section>
+
+      <section class="secondary-workspace" aria-label="Secondary investigation evidence">
+        <div class="secondary-heading">
+          <div><span class="section-index">Secondary investigation</span><h3>Reduction and replay evidence</h3></div>
+          <nav class="evidence-nav" aria-label="Investigation evidence sections">${model.reduction ? '<a href="#reduction-evidence">Reduction trace</a>' : ''}<a href="#replay-evidence">Replay evidence</a></nav>
+        </div>
+        <div class="secondary-grid">
+          <div class="secondary-main">${shrinkInvestigation(model)}${scenarioReplay(model)}</div>
+          <aside class="supporting-column">${evidenceRail(model)}</aside>
+        </div>
+      </section>
       <div class="footer-note">Measured values come from the evidence artifact. “Unavailable” means the runner did not record that field; it is not a success signal.</div>
     </div>
   `;
+  emptyState.hidden = true;
+  runView.hidden = false;
   main.focus({ preventScroll: true });
 }
 
@@ -628,6 +677,7 @@ async function submitRun(event) {
   const body = { scenario, mode };
   if (mode === 'shrink') body.maxAttempts = Number(maxAttempts.value);
   runButton.disabled = true;
+  runForm.setAttribute('aria-busy', 'true');
   runButton.setAttribute('aria-busy', 'true');
   setRunStatus(mode === 'shrink' ? 'Running baseline and verified reductions…' : 'Starting paired replay…');
   try {
@@ -640,6 +690,7 @@ async function submitRun(event) {
     setRunStatus(error.message, { error: true });
   } finally {
     runButton.disabled = false;
+    runForm.removeAttribute('aria-busy');
     runButton.removeAttribute('aria-busy');
   }
 }
