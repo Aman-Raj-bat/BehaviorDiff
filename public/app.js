@@ -17,6 +17,8 @@ const runButton = $('#run-button');
 const runStatus = $('#run-status');
 const maxAttempts = $('#max-attempts');
 const topbarContext = $('#topbar-context');
+const emptyState = $('#empty-state');
+const runView = $('#run-view');
 
 function escapeHtml(value) {
   return String(value)
@@ -486,6 +488,63 @@ function runDetails(model) {
     <div><dt>Replay scenario SHA-256</dt><dd>${display(model.replay?.sha256)}</dd></div>
     <div><dt>Exit code</dt><dd>${model.exitCode === null ? '<span class="unavailable">Unavailable</span>' : escapeHtml(model.exitCode)}</dd></div>
   </dl>`;
+}
+
+function investigationProgress(model) {
+  const hasMismatch = Boolean(model.mismatch && model.difference);
+  const reduction = Boolean(model.reduction);
+  const reductionComplete = Boolean(reduction && model.counts?.minimizedStepCount != null);
+  const hasResponses = Boolean(model.recordedResponses?.length);
+  const reductionDetail = reductionComplete
+    ? `${escapeHtml(model.counts.originalStepCount)} → ${escapeHtml(model.counts.minimizedStepCount)} steps retained`
+    : reduction
+      ? 'Reduction in progress'
+      : 'Not requested for this run';
+  const replayedModel = model.runId?.includes('/') === true;
+  const replayDetail = replayedModel
+    ? `Independent replay returned ${escapeHtml(model.outcome)}`
+    : hasResponses
+      ? `${escapeHtml(model.counts.actualReplays === null ? 'paired response evidence recorded' : `${model.counts.actualReplays} real replays recorded`)}`
+      : 'No paired response evidence';
+  const steps = [
+    {
+      number: '01',
+      label: 'Regression detected',
+      detail: model.outcome === 'REGRESSION' ? 'Business difference recorded' : model.outcome === 'PASS' ? 'No unignored difference' : 'Evidence is incomplete',
+      state: model.outcome === 'INCONCLUSIVE' ? 'warning' : 'complete',
+    },
+    {
+      number: '02',
+      label: 'Mismatch isolated',
+      detail: hasMismatch ? `${escapeHtml(model.mismatch.stepId)} · ${escapeHtml(model.mismatch.pointer)}` : model.outcome === 'PASS' ? 'No mismatch signature' : 'Target unavailable',
+      state: hasMismatch ? 'complete' : model.outcome === 'PASS' ? 'complete' : 'warning',
+    },
+    {
+      number: '03',
+      label: 'Scenario minimized',
+      detail: reductionDetail,
+      state: reductionComplete ? 'complete' : reduction ? 'warning' : 'muted',
+    },
+    {
+      number: '04',
+      label: 'Replay',
+      detail: replayDetail,
+      state: hasResponses && model.outcome !== 'INCONCLUSIVE' ? 'complete' : 'warning',
+    },
+    {
+      number: '05',
+      label: 'Verify',
+      detail: model.outcome === 'PASS' ? 'No unignored differences' : hasMismatch && model.outcome === 'REGRESSION' ? 'Target signature retained' : 'Evidence incomplete',
+      state: model.outcome === 'INCONCLUSIVE' ? 'warning' : hasMismatch || model.outcome === 'PASS' ? 'complete' : 'muted',
+    },
+  ];
+  return `<nav class="investigation-progress" aria-label="Investigation progression">
+    <div class="progress-heading"><span class="section-index">Investigation path</span><span>${escapeHtml(model.outcome)}</span></div>
+    <ol>${steps.map((step) => `<li class="progress-step ${step.state}">
+      <span class="progress-number">${step.number}</span>
+      <span class="progress-copy"><strong>${step.label}</strong><small>${step.detail}</small></span>
+    </li>`).join('')}</ol>
+  </nav>`;
 }
 
 function renderModel(model) {
