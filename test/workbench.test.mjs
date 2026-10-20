@@ -242,6 +242,10 @@ test('workbench API uses fixed scenarios and performs a real replay action', asy
     assert.match(labHtml, /topbar-scenario-select/);
     assert.match(labHtml, /class="lab-layout"/);
     assert.match(labHtml, /id="run-view"/);
+    assert.match(labHtml, /id="evidence-fog"/);
+    assert.match(labHtml, /cdn\.jsdelivr\.net\/npm\/vanta@latest\/dist\/vanta\.fog\.min\.js/);
+    assert.match(labHtml, /src="\/interaction-effects\.js"/);
+    assert.match(labHtml, /id="run-button"[^>]+data-particle-click/);
     assert.match(labHtml, /class="skip-link"/);
     assert.match(labHtml, /href="\/favicon\.svg"/);
     assert.match(labHtml, /href="\/favicon\.png"/);
@@ -261,6 +265,10 @@ test('workbench API uses fixed scenarios and performs a real replay action', asy
     assert.match(appScript, /evidenceRail/);
     assert.match(appScript, /mismatchSpecimen/);
     assert.match(appScript, /runView\.innerHTML/);
+    assert.match(appScript, /VANTA\.FOG/);
+    assert.match(appScript, /destroyFog/);
+    assert.match(appScript, /highlightColor: 0x8aa8c1/);
+    assert.match(appScript, /speed: 0\.9/);
     const landingScript = await request('/landing.js');
     assert.equal(landingScript.status, 200);
     assert.match(landingScript.headers.get('content-type'), /^text\/javascript; charset=utf-8/);
@@ -294,7 +302,11 @@ test('workbench API uses fixed scenarios and performs a real replay action', asy
     assert.match(stylesText, /#behavior-halo/);
     assert.match(stylesText, /pointer-events: none/);
     assert.match(stylesText, /#behavior-halo\.is-static/);
+    assert.match(stylesText, /#evidence-fog/);
+    assert.match(stylesText, /\.particle-click-layer/);
     assert.match(stylesText, /\.landing-nav \{[\s\S]*?background: #8996a5/);
+    assert.match(stylesText, /\.lab-page \.topbar/);
+    assert.match(stylesText, /background: #8996a5/);
     assert.match(stylesText, /prefers-reduced-motion/);
     const logo = await request('/logo.svg');
     assert.equal(logo.status, 200);
