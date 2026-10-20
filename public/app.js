@@ -48,13 +48,45 @@ function outcomeBadge(outcome) {
   return `<span class="outcome-badge ${outcomeClass(outcome)}">${display(outcome)}</span>`;
 }
 
+function getAuthToken() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const tokenFromUrl = urlParams.get('token') || urlParams.get('auth_token');
+  if (tokenFromUrl) {
+    try { sessionStorage.setItem('behaviordiff_token', tokenFromUrl); } catch {}
+    return tokenFromUrl;
+  }
+  try {
+    return sessionStorage.getItem('behaviordiff_token');
+  } catch {
+    return null;
+  }
+}
+
 async function api(path, options = {}) {
+  const headers = { 'content-type': 'application/json', ...(options.headers ?? {}) };
+  const token = getAuthToken();
+  if (token && !headers['authorization']) {
+    headers['authorization'] = `Bearer ${token}`;
+  }
   const response = await fetch(path, {
-    headers: { 'content-type': 'application/json', ...(options.headers ?? {}) },
+    headers,
     ...options,
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error ?? `Request failed with HTTP ${response.status}`);
+  if (!response.ok) {
+    if (response.status === 401 && typeof window.prompt === 'function') {
+      const promptToken = window.prompt('Authentication required: Enter your workbench authorization token:');
+      if (promptToken) {
+        try { sessionStorage.setItem('behaviordiff_token', promptToken.trim()); } catch {}
+        headers['authorization'] = `Bearer ${promptToken.trim()}`;
+        const retryResponse = await fetch(path, { headers, ...options });
+        const retryBody = await retryResponse.json().catch(() => ({}));
+        if (!retryResponse.ok) throw new Error(retryBody.error ?? `Request failed with HTTP ${retryResponse.status}`);
+        return retryBody;
+      }
+    }
+    throw new Error(body.error ?? `Request failed with HTTP ${response.status}`);
+  }
   return body;
 }
 

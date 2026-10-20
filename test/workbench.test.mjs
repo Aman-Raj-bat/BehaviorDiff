@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { buildWorkbenchModel, parseEvidence, WorkbenchEvidenceError } from '../src/workbench-data.mjs';
 import {
   createWorkbenchServer,
+  parsePort,
+  parseWorkbenchArguments,
   scenarioPathFor,
   validateRunRequest,
 } from '../src/workbench-server.mjs';
@@ -777,3 +779,227 @@ test('normal workbench runs do not expose shrink-only original scenarios', async
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('parseWorkbenchArguments parses CLI flags and environment variables for Render deployment', () => {
+  assert.equal(parsePort('4173'), 4173);
+  assert.equal(parsePort('10000'), 10000);
+  assert.throws(() => parsePort('abc'), /port must be an integer/);
+  assert.throws(() => parsePort('-1'), /port must be an integer/);
+  assert.throws(() => parsePort('70000'), /port must be between 0 and 65535/);
+
+  // Defaults for local development
+  const localDefaults = parseWorkbenchArguments([], {});
+  assert.equal(localDefaults.port, 4173);
+  assert.equal(localDefaults.host, '127.0.0.1');
+  assert.equal(localDefaults.authToken, undefined);
+
+  // CLI argument flags
+  const cliArgs = parseWorkbenchArguments(['--port', '8080', '--host', '0.0.0.0', '--auth-token', 'my-token'], {});
+  assert.equal(cliArgs.port, 8080);
+  assert.equal(cliArgs.host, '0.0.0.0');
+  assert.equal(cliArgs.authToken, 'my-token');
+
+  // Environment variables (Render pattern)
+  const renderEnv = parseWorkbenchArguments([], {
+    PORT: '10000',
+    HOST: '0.0.0.0',
+    WORKBENCH_AUTH_TOKEN: 'render-secret-123',
+  });
+  assert.equal(renderEnv.port, 10000);
+  assert.equal(renderEnv.host, '0.0.0.0');
+  assert.equal(renderEnv.authToken, 'render-secret-123');
+
+  // RENDER=true defaults host to 0.0.0.0 when HOST is not set
+  const renderDefaultHost = parseWorkbenchArguments([], { RENDER: 'true', PORT: '10000' });
+  assert.equal(renderDefaultHost.port, 10000);
+  assert.equal(renderDefaultHost.host, '0.0.0.0');
+
+  // AUTH_TOKEN fallback
+  const fallbackAuth = parseWorkbenchArguments([], { AUTH_TOKEN: 'alt-secret' });
+  assert.equal(fallbackAuth.authToken, 'alt-secret');
+
+  // CLI overrides environment
+  const overrides = parseWorkbenchArguments(['--port', '9000', '--host', '127.0.0.1'], {
+    PORT: '10000',
+    HOST: '0.0.0.0',
+  });
+  assert.equal(overrides.port, 9000);
+  assert.equal(overrides.host, '127.0.0.1');
+
+  // Help flag
+  assert.deepEqual(parseWorkbenchArguments(['--help'], {}), { help: true });
+  assert.deepEqual(parseWorkbenchArguments(['-h'], {}), { help: true });
+
+  // Unknown option error
+  assert.throws(() => parseWorkbenchArguments(['--unknown'], {}), /Unknown or incomplete option --unknown/);
+});
+
+test('render.yaml defines a valid Render web service blueprint', async () => {
+  const yamlContent = await readFile(path.join(ROOT, 'render.yaml'), 'utf8');
+  assert.match(yamlContent, /type:\s*web/);
+  assert.match(yamlContent, /name:\s*behaviordiff/);
+  assert.match(yamlContent, /env:\s*node/);
+  assert.match(yamlContent, /HOST/);
+  assert.match(yamlContent, /0\.0\.0\.0/);
+  assert.match(yamlContent, /WORKBENCH_AUTH_TOKEN/);
+  assert.match(yamlContent, /generateValue:\s*true/);
+  assert.match(yamlContent, /npm run build/);
+  assert.match(yamlContent, /node bin\/behavior-diff-workbench\.mjs/);
+});
+
+test('workbench enforces authentication token protection on mutating execution APIs', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-auth-'));
+  const outputRoot = path.join(directory, 'artifacts');
+  const secretToken = 'forensic-guard-token-xyz789';
+  const workbench = createWorkbenchServer({ outputRoot, authToken: secretToken });
+
+  try {
+    const address = await workbench.listen({ port: 0 });
+    const base = address.url.replace(/\/$/, '');
+
+    // Public read endpoints remain accessible without token
+    const publicIndex = await fetch(`${base}/`);
+    assert.equal(publicIndex.status, 200);
+
+    const publicScenarios = await fetch(`${base}/api/scenarios`);
+    assert.equal(publicScenarios.status, 200);
+
+    const publicRuns = await fetch(`${base}/api/runs`);
+    assert.equal(publicRuns.status, 200);
+
+    // POST /api/runs without token is rejected with 401
+    const unauthenticatedRun = await fetch(`${base}/api/runs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scenario: 'cart-total', mode: 'run' }),
+    });
+    assert.equal(unauthenticatedRun.status, 401);
+    assert.equal(unauthenticatedRun.headers.get('www-authenticate'), 'Bearer realm="BehaviorDiff Workbench"');
+    const unauthBody = await unauthenticatedRun.json();
+    assert.match(unauthBody.error, /unauthorized: valid authentication token required/);
+
+    // POST /api/runs with invalid token is rejected with 401
+    const badTokenRun = await fetch(`${base}/api/runs`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: 'Bearer wrong-secret-token',
+      },
+      body: JSON.stringify({ scenario: 'cart-total', mode: 'run' }),
+    });
+    assert.equal(badTokenRun.status, 401);
+
+    // POST /api/runs with valid token via Authorization Bearer succeeds
+    const bearerRun = await fetch(`${base}/api/runs`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${secretToken}`,
+      },
+      body: JSON.stringify({ scenario: 'cart-total', mode: 'run' }),
+    });
+    assert.equal(bearerRun.status, 201);
+    const bearerModel = await bearerRun.json();
+    assert.equal(bearerModel.outcome, 'REGRESSION');
+
+    // POST /api/runs with valid token via x-workbench-token header succeeds
+    const customHeaderRun = await fetch(`${base}/api/runs`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-workbench-token': secretToken,
+      },
+      body: JSON.stringify({ scenario: 'cart-total-pass', mode: 'run' }),
+    });
+    assert.equal(customHeaderRun.status, 201);
+    const customModel = await customHeaderRun.json();
+    assert.equal(customModel.outcome, 'PASS');
+
+    // POST /api/runs with valid token via query parameter succeeds
+    const queryTokenRun = await fetch(`${base}/api/runs?token=${secretToken}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scenario: 'cart-total', mode: 'run' }),
+    });
+    assert.equal(queryTokenRun.status, 201);
+
+    // Replay endpoint without token is rejected with 401
+    const unauthenticatedReplay = await fetch(`${base}/api/runs/${bearerModel.runId}/replay`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(unauthenticatedReplay.status, 401);
+
+    // Replay endpoint with valid token succeeds
+    const authenticatedReplay = await fetch(`${base}/api/runs/${bearerModel.runId}/replay`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${secretToken}`,
+      },
+      body: '{}',
+    });
+    assert.equal(authenticatedReplay.status, 201);
+    const replayModel = await authenticatedReplay.json();
+    assert.equal(replayModel.outcome, 'REGRESSION');
+  } finally {
+    await workbench.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('workbench on non-loopback host blocks execution if authentication token is not configured', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-nonloop-'));
+  const outputRoot = path.join(directory, 'artifacts');
+  const workbench = createWorkbenchServer({ outputRoot, authToken: undefined });
+
+  try {
+    const address = await workbench.listen({ port: 0, host: '0.0.0.0' });
+    const base = `http://127.0.0.1:${address.port}`;
+
+    // Read endpoints work
+    const indexRes = await fetch(`${base}/`);
+    assert.equal(indexRes.status, 200);
+
+    const scenariosRes = await fetch(`${base}/api/scenarios`);
+    assert.equal(scenariosRes.status, 200);
+
+    // Mutating run endpoint is disabled with 403
+    const runRes = await fetch(`${base}/api/runs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scenario: 'cart-total', mode: 'run' }),
+    });
+    assert.equal(runRes.status, 403);
+    const runBody = await runRes.json();
+    assert.match(runBody.error, /execution disabled: authentication token/);
+  } finally {
+    await workbench.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('workbench on loopback preserves local development behavior without requiring authentication', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'behaviordiff-workbench-loopback-'));
+  const outputRoot = path.join(directory, 'artifacts');
+  const workbench = createWorkbenchServer({ outputRoot, authToken: undefined });
+
+  try {
+    const address = await workbench.listen({ port: 0, host: '127.0.0.1' });
+    const base = address.url.replace(/\/$/, '');
+
+    const response = await fetch(`${base}/api/runs`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scenario: 'cart-total-pass', mode: 'run' }),
+    });
+    assert.equal(response.status, 201);
+    const model = await response.json();
+    assert.equal(model.outcome, 'PASS');
+  } finally {
+    await workbench.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+

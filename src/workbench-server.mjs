@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { mkdir, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -74,6 +74,87 @@ function boundedInteger(value, label, minimum, maximum) {
     throw new WorkbenchRequestError(`${label} must be an integer from ${minimum} to ${maximum}`);
   }
   return value;
+}
+
+export function parsePort(value) {
+  if (!/^\d+$/.test(String(value))) throw new Error('port must be an integer');
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 0 || port > 65_535) throw new Error('port must be between 0 and 65535');
+  return port;
+}
+
+export function parseWorkbenchArguments(argv = [], env = process.env) {
+  let port = 4173;
+  if (env.PORT !== undefined && env.PORT !== '') {
+    port = parsePort(env.PORT);
+  }
+
+  let host = '127.0.0.1';
+  if (env.HOST !== undefined && env.HOST !== '') {
+    host = env.HOST;
+  } else if (env.RENDER === 'true') {
+    host = '0.0.0.0';
+  }
+
+  let authToken = env.WORKBENCH_AUTH_TOKEN || env.AUTH_TOKEN || undefined;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === '--port' && argv[index + 1]) {
+      port = parsePort(argv[index + 1]);
+      index += 1;
+    } else if (argv[index] === '--host' && argv[index + 1]) {
+      host = argv[index + 1];
+      index += 1;
+    } else if (argv[index] === '--auth-token' && argv[index + 1]) {
+      authToken = argv[index + 1];
+      index += 1;
+    } else if (argv[index] === '--help' || argv[index] === '-h') {
+      return { help: true };
+    } else {
+      throw new Error(`Unknown or incomplete option ${argv[index]}`);
+    }
+  }
+
+  return { port, host, authToken };
+}
+
+function timingSafeTokenMatch(expected, candidate) {
+  if (typeof expected !== 'string' || typeof candidate !== 'string') return false;
+  const expectedBuf = Buffer.from(expected, 'utf8');
+  const candidateBuf = Buffer.from(candidate, 'utf8');
+  if (expectedBuf.length !== candidateBuf.length) return false;
+  return timingSafeEqual(expectedBuf, candidateBuf);
+}
+
+function extractCandidateToken(request, url) {
+  const authHeader = request.headers['authorization'];
+  if (typeof authHeader === 'string') {
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (bearerMatch) return bearerMatch[1].trim();
+    return authHeader.trim();
+  }
+  const customHeader = request.headers['x-workbench-token'];
+  if (typeof customHeader === 'string') return customHeader.trim();
+
+  const queryToken = url.searchParams.get('token') ?? url.searchParams.get('auth_token');
+  if (typeof queryToken === 'string') return queryToken.trim();
+
+  return undefined;
+}
+
+function assertAuthorized(request, response, url, expectedToken, isLoopback) {
+  if (expectedToken) {
+    const candidate = extractCandidateToken(request, url);
+    if (!candidate || !timingSafeTokenMatch(expectedToken, candidate)) {
+      response.setHeader('WWW-Authenticate', 'Bearer realm="BehaviorDiff Workbench"');
+      throw new WorkbenchRequestError('unauthorized: valid authentication token required to trigger runs or replays', 401);
+    }
+    return;
+  }
+
+  if (!isLoopback) {
+    throw new WorkbenchRequestError('execution disabled: authentication token (WORKBENCH_AUTH_TOKEN) must be configured when binding to a non-loopback host', 403);
+  }
 }
 
 export function scenarioPathFor(scenarioId, root = ROOT) {
@@ -295,12 +376,16 @@ export function createWorkbenchServer({
   root = ROOT,
   outputRoot = path.join(root, 'artifacts', 'workbench'),
   maxConcurrentJobs = 1,
+  authToken = process.env.WORKBENCH_AUTH_TOKEN || process.env.AUTH_TOKEN || undefined,
 } = {}) {
   if (!Number.isInteger(maxConcurrentJobs) || maxConcurrentJobs < 1) {
     throw new WorkbenchRequestError('maxConcurrentJobs must be a positive integer');
   }
   let activeJobs = 0;
   let closing = false;
+  let boundHost = '127.0.0.1';
+  let isLoopbackHost = true;
+  const serverAuthToken = typeof authToken === 'string' && authToken.length > 0 ? authToken : undefined;
   const activeControllers = new Set();
   const activeTasks = new Set();
   function assertAcceptingJobs() {
@@ -350,6 +435,7 @@ export function createWorkbenchServer({
 
       if (url.pathname === '/api/runs' && request.method === 'POST') {
         assertAcceptingJobs();
+        assertAuthorized(request, response, url, serverAuthToken, isLoopbackHost);
         const runRequest = validateRunRequest(await requestBody(request));
         jsonResponse(response, 201, await runRequestJob(
           request,
@@ -414,6 +500,7 @@ export function createWorkbenchServer({
         }
         if (runPath.length === 2 && action === 'replay' && request.method === 'POST') {
           assertAcceptingJobs();
+          assertAuthorized(request, response, url, serverAuthToken, isLoopbackHost);
           await requestBody(request);
           jsonResponse(response, 201, await runRequestJob(
             request,
@@ -444,7 +531,8 @@ export function createWorkbenchServer({
   return {
     server,
     async listen({ port = 4173, host = '127.0.0.1' } = {}) {
-      if (host !== '127.0.0.1' && host !== '::1') throw new WorkbenchRequestError('workbench must bind to loopback');
+      boundHost = host;
+      isLoopbackHost = host === '127.0.0.1' || host === '::1';
       await new Promise((resolve, reject) => {
         server.once('error', reject);
         server.listen(port, host, resolve);

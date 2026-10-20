@@ -4,7 +4,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE.md)
 [![Node.js Version](https://img.shields.io/badge/Node.js-%3E%3D22.0.0-brightgreen.svg)](package.json)
-[![Tests Passing](https://img.shields.io/badge/Tests-82%20passed-success.svg)](test/workbench.test.mjs)
+[![Tests Passing](https://img.shields.io/badge/Tests-87%20passed-success.svg)](test/workbench.test.mjs)
 [![Architecture: Zero Runtime Dependencies](https://img.shields.io/badge/Dependencies-Zero%20Runtime-orange.svg)](package.json)
 [![Status: Production Ready](https://img.shields.io/badge/Stability-Verified%20Reliable-blueviolet.svg)](RELIABILITY.md)
 
@@ -21,13 +21,14 @@
   - [Execution & Shrinking Workflow](#execution--shrinking-workflow)
 - [The Evidence Lab & Workbench](#-the-evidence-lab--workbench)
 - [Verification & Execution Gallery](#-verification--execution-gallery)
-  - [Automated Test Suite (82/82 Passed)](#1-automated-test-suite-8282-passed)
+  - [Automated Test Suite (87/87 Passed)](#1-automated-test-suite-8787-passed)
   - [Production Distribution Build](#2-production-distribution-build)
   - [Delta-Debugging & Shrinking Demo](#3-delta-debugging--shrinking-demo)
 - [Demo Walkthrough Video](#-demo-walkthrough-video)
 - [Scenario Anatomy & Delta Shrinking](#-scenario-anatomy--delta-shrinking)
 - [Getting Started & Installation](#-getting-started--installation)
 - [Running with Docker](#-running-with-docker)
+- [Deployment to Render](#-deployment-to-render)
 - [Built with OmniRush](#-built-with-omnirush)
 - [License & Copyright](#-license--copyright)
 
@@ -203,14 +204,14 @@ BehaviorDiff comes equipped with an interactive **Evidence Lab** (`http://127.0.
 
 All execution flows have been validated with comprehensive test suites, production build gates, and automated end-to-end delta-debugging demos.
 
-### 1. Automated Test Suite (82/82 Passed)
+### 1. Automated Test Suite (87/87 Passed)
 
-The test suite validates deep transport isolation, socket crashes, late candidate timeouts, escaped JSON Pointer matching, and API concurrency safety.
+The test suite validates deep transport isolation, socket crashes, late candidate timeouts, escaped JSON Pointer matching, API concurrency safety, Render deployment configurations, and public host access protection.
 
-| Test Execution Overview | Test Completion & Full Suite Pass (82/82) |
+| Test Execution Overview | Test Completion & Full Suite Pass (87/87) |
 |---|---|
 | ![npm test Part 1](docs/assets/npm-test-01.png) | ![npm test Part 2](docs/assets/npm-test-02.png) |
-| *Part 1: Protocol robustness, transport timeout handling, late reference/candidate failures, crash recovery, and comparator semantics.* | *Part 2: 82 tests completed successfully with 0 failures, 0 cancellations, and 0 skipped tests (~15.1s duration).* |
+| *Part 1: Protocol robustness, transport timeout handling, late reference/candidate failures, crash recovery, and comparator semantics.* | *Part 2: 87 tests completed successfully with 0 failures, 0 cancellations, and 0 skipped tests (~15.4s duration).* |
 
 ---
 
@@ -408,6 +409,95 @@ docker run --rm -it -p 4173:4173 --network host --entrypoint node behaviordiff:l
 ```
 
 > **Note for Docker Desktop (macOS/Windows)**: Use port mapping `-p 4173:4173` and visit `http://localhost:4173`. On native Linux, `--network host` connects directly to the container's loopback interface.
+
+---
+
+## 🌐 Deployment to Render
+
+BehaviorDiff is fully configured for zero-configuration, secure deployment as a **Web Service** on [Render](https://render.com/).
+
+### Option A: Automated Blueprint Deployment (`render.yaml`)
+
+The repository includes a production-ready `render.yaml` blueprint. To deploy with one click:
+
+1. Push your repository to GitHub.
+2. In the Render Dashboard, navigate to **Blueprints** → **New Blueprint Instance**.
+3. Select your `BehaviorDiff` repository.
+4. Render will read `render.yaml`, configure Node.js 22, bind `HOST: 0.0.0.0`, and automatically generate a cryptographically secure `WORKBENCH_AUTH_TOKEN`.
+5. Click **Apply**.
+
+```yaml
+# render.yaml
+services:
+  - type: web
+    name: behaviordiff
+    env: node
+    plan: starter
+    buildCommand: npm ci --offline && npm run build
+    startCommand: node bin/behavior-diff-workbench.mjs
+    envVars:
+      - key: NODE_VERSION
+        value: 22.18.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: WORKBENCH_AUTH_TOKEN
+        generateValue: true
+```
+
+### Option B: Manual Web Service Setup on Render
+
+If configuring the web service manually in the Render dashboard:
+
+| Setting | Value | Description |
+|---|---|---|
+| **Runtime** | `Node` | Requires Node `>=22.0.0` (set `NODE_VERSION=22.18.0`) |
+| **Build Command** | `npm ci --offline && npm run build` | Compiles distribution bundles and validates scripts |
+| **Start Command** | `node bin/behavior-diff-workbench.mjs` | Starts workbench server with dynamic port and host detection |
+| **Environment Variables** | `HOST=0.0.0.0`<br>`WORKBENCH_AUTH_TOKEN=<random-secret>` | `HOST=0.0.0.0` binds to all interfaces; `WORKBENCH_AUTH_TOKEN` secures execution APIs |
+
+> ℹ️ *Note: Render dynamically assigns the `PORT` environment variable (e.g., `10000`). BehaviorDiff automatically reads `process.env.PORT` on startup.*
+
+---
+
+### 🛡️ Cloud Security & Access Protection Model
+
+When deployed publicly on Render or any remote host, BehaviorDiff enforces strict access boundaries:
+
+1. **Public Read-Only Exploration**:
+   - The landing page (`/`), Evidence Lab GUI (`/lab`), static assets, and read-only scenario catalogs (`/api/scenarios`, `/api/runs`) are publicly accessible without authentication.
+2. **Protected Mutating Execution APIs**:
+   - All APIs that spawn child processes, allocate ports, or execute delta-debugging searches (`POST /api/runs` and `POST /api/runs/:runId/replay`) require a valid `WORKBENCH_AUTH_TOKEN`.
+   - Unauthorized requests are rejected with `HTTP 401 Unauthorized` and `WWW-Authenticate: Bearer realm="BehaviorDiff Workbench"`.
+   - Tokens are compared using timing-safe byte equality (`crypto.timingSafeEqual`) to prevent timing side-channel attacks.
+3. **Public Host Failsafe**:
+   - If the server binds to a public host (`0.0.0.0`) without a configured `WORKBENCH_AUTH_TOKEN`, all run, shrink, and replay triggers are automatically disabled with `HTTP 403 Forbidden` (`execution disabled: authentication token (WORKBENCH_AUTH_TOKEN) must be configured when binding to a non-loopback host`), preventing open compute abuse.
+4. **Sandboxed Fixtures**:
+   - The server only ever runs checked-in scenarios from `scenarios/` against fixed fixture binaries from `src/fixture-process.mjs`. It strictly rejects arbitrary URLs, external paths, or user-supplied executable binaries.
+5. **Local Development Untouched**:
+   - When running locally on loopback (`127.0.0.1` or `::1`) without `WORKBENCH_AUTH_TOKEN`, all APIs function without authentication, ensuring seamless local development with zero friction.
+
+---
+
+### 🔑 Authenticating in the Evidence Lab
+
+When accessing your Render deployment:
+
+- **Via URL Query Parameter**: Open `https://<your-render-service>.onrender.com/lab?token=YOUR_WORKBENCH_AUTH_TOKEN`. The token is automatically saved into session storage for all subsequent run and replay requests.
+- **Via In-App Prompt**: If you click **Run investigation** without a token, the Evidence Lab will prompt you to enter your token.
+- **Via API / Curl**:
+  ```bash
+  # Trigger a run via Bearer header
+  curl -X POST https://<your-render-service>.onrender.com/api/runs \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer YOUR_WORKBENCH_AUTH_TOKEN" \
+    -d '{"scenario":"cart-noisy","mode":"shrink","maxAttempts":50}'
+
+  # Or using the custom header
+  curl -X POST https://<your-render-service>.onrender.com/api/runs \
+    -H "Content-Type: application/json" \
+    -H "x-workbench-token: YOUR_WORKBENCH_AUTH_TOKEN" \
+    -d '{"scenario":"cart-total","mode":"run"}'
+  ```
 
 ---
 

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: behaviordiff
+    env: node
+    plan: starter
+    buildCommand: npm ci --offline && npm run build
+    startCommand: node bin/behavior-diff-workbench.mjs
+    envVars:
+      - key: NODE_VERSION
+        value: 22.18.0
+      - key: HOST
+        value: 0.0.0.0
+      - key: WORKBENCH_AUTH_TOKEN
+        generateValue: true
