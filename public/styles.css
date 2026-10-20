@@ -1414,6 +1414,21 @@ select, input[type="number"] { min-height: 48px; font-size: var(--type-body); li
 @media (max-width: 720px) {
   .lab-page .topbar { width: min(100% - 26px, 520px); min-height: 61px; padding: 0 14px; }
 }
+#evidence-fog {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(circle at 62% 18%, rgba(138, 168, 193, .12), transparent 38rem), #101316;
+  opacity: .27;
+}
+#evidence-fog canvas {
+  display: block;
+  pointer-events: none !important;
+}
+#evidence-fog.is-static { opacity: .13; }
+
 /* Opt-in particle feedback for primary actions only. */
 [data-particle-click] { position: relative; }
 .particle-click-layer {
