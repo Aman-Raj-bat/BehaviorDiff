@@ -1343,3 +1343,36 @@ select, input[type="number"] { min-height: 48px; font-size: var(--type-body); li
   .lab-page .reduction-counts { grid-template-columns: 1fr 24px 1fr; }
   .lab-page .reduction-overview { padding: 13px; }
 }
+
+/* Opt-in particle feedback for primary actions only. */
+[data-particle-click] { position: relative; }
+.particle-click-layer {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.particle-click-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--particle-size);
+  height: var(--particle-size);
+  border-radius: 50%;
+  background: var(--particle-color);
+  box-shadow: 0 0 0 1px rgba(255, 250, 240, .12);
+  opacity: 0;
+  pointer-events: none;
+  animation: particle-click-burst var(--particle-duration) cubic-bezier(.22, .7, .28, 1) var(--particle-delay, 0s) both;
+}
+[data-particle-click].is-particle-pressed { scale: .985; }
+@keyframes particle-click-burst {
+  0% { opacity: .9; transform: translate(-50%, -50%) scale(.65); }
+  62% { opacity: .72; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--particle-x)), calc(-50% + var(--particle-y))) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #evidence-fog { opacity: .08; }
+  [data-particle-click].is-particle-pressed { scale: none; }
+}
