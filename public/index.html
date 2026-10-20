@@ -7,17 +7,13 @@
     <meta name="theme-color" content="#101316">
     <title>BehaviorDiff — Find the difference. Prove the bug.</title>
     <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.png" type="image/png">
   </head>
   <body class="landing-page">
     <header class="landing-nav">
       <a class="landing-brand" href="/" aria-label="BehaviorDiff home">
-        <span class="landing-brand-mark" aria-hidden="true">
-          <span class="landing-mark-track landing-mark-track-one"></span>
-          <span class="landing-mark-track landing-mark-track-two"></span>
-          <span class="landing-mark-node landing-mark-node-one"></span>
-          <span class="landing-mark-node landing-mark-node-two"></span>
-          <span class="landing-mark-node landing-mark-node-diff"></span>
-        </span>
+        <span class="landing-brand-mark" aria-hidden="true"><img class="brand-logo" src="/logo.svg" alt=""></span>
         <span class="landing-brand-copy">
           <strong>BEHAVIOR<span>DIFF</span></strong>
           <small>EVIDENCE LAB / LOCAL INSTRUMENT</small>
@@ -56,10 +52,9 @@
 
         <div class="product-window-wrap">
           <article class="product-window" data-demo-sequence aria-label="BehaviorDiff Evidence Lab product preview">
-            <!-- The supplied hand asset was not present in the workspace at implementation time.
-                 Keep the choreography hook empty rather than substituting an illustration. -->
-            <span class="preview-cursor" aria-hidden="true" data-cursor-asset="unavailable" hidden>
+            <span class="preview-cursor" aria-hidden="true" data-cursor-asset="supplied" data-cursor-src="/hand_cursor.png" hidden>
               <span class="preview-cursor-ripple"></span>
+              <img class="preview-cursor-image" alt="" decoding="async" draggable="false">
             </span>
             <header class="window-chrome">
               <div class="window-controls" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -98,7 +93,7 @@
                   <div class="preview-pointer" data-demo-target="pointer"><span>JSON POINTER</span><code>/items/0/lineTotal</code></div>
                 </section>
 
-                <div class="preview-response-grid" aria-label="Recorded response comparison">
+                <div class="preview-response-grid" data-demo-target="compare" aria-label="Recorded response comparison">
                   <div class="preview-response reference-response">
                     <div class="preview-response-head"><span><i></i>REFERENCE</span><b>HTTP 200</b></div>
                     <pre>{
