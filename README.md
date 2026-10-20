@@ -7,6 +7,12 @@
 [![Tests Passing](https://img.shields.io/badge/Tests-87%20passed-success.svg)](test/workbench.test.mjs)
 [![Architecture: Zero Runtime Dependencies](https://img.shields.io/badge/Dependencies-Zero%20Runtime-orange.svg)](package.json)
 [![Status: Production Ready](https://img.shields.io/badge/Stability-Verified%20Reliable-blueviolet.svg)](RELIABILITY.md)
+[![Live Website](https://img.shields.io/badge/Live%20Website-behaviordiff.onrender.com-success.svg?style=flat&logo=render)](https://behaviordiff.onrender.com/)
+[![Video Demo](https://img.shields.io/badge/Video%20Demo-YouTube%20Watch-red.svg?style=flat&logo=youtube)](https://youtu.be/6_B9Yxa2DHs)
+
+> 🌐 **Live Website**: [https://behaviordiff.onrender.com/](https://behaviordiff.onrender.com/)  
+> 🧪 **Evidence Lab GUI**: [https://behaviordiff.onrender.com/lab](https://behaviordiff.onrender.com/lab)  
+> 🎥 **Video Demo Walkthrough**: [https://youtu.be/6_B9Yxa2DHs](https://youtu.be/6_B9Yxa2DHs)
 
 ---
 
@@ -239,20 +245,19 @@ Demonstrating the reduction of a noisy 6-step cart checkout scenario down to the
 
 ## 🎥 Demo Walkthrough Video
 
-Watch the complete walkthrough of BehaviorDiff demonstrating the CLI engine, the delta-shrinking process, and the Evidence Lab in action:
+Watch the comprehensive video walkthrough demonstrating the BehaviorDiff forensic engine, autonomous delta-debugging (shrinking), and the Evidence Lab in action:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                                                                             │
-│                        ▶️ BEHAVIORDIFF DEMO VIDEO                           │
-│                                                                             │
-│               [ Watch the Walkthrough Demo on YouTube / Loom ]              │
-│                           https://youtu.be/placeholder                      │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+[![BehaviorDiff Demo Walkthrough Video](https://img.youtube.com/vi/6_B9Yxa2DHs/maxresdefault.jpg)](https://youtu.be/6_B9Yxa2DHs)
 
-> 📌 *Note: The demo video link will be updated here upon final recording.*
+| 📺 Video Demo Walkthrough | 🌐 Live Deployment |
+|---|---|
+| **YouTube**: [https://youtu.be/6_B9Yxa2DHs](https://youtu.be/6_B9Yxa2DHs) | **Render**: [https://behaviordiff.onrender.com/](https://behaviordiff.onrender.com/) |
+
+> 💡 **What the demo covers**:
+> 1. Launching the interactive **Evidence Lab** interface with dynamic 3D spatial atmosphere (`Vanta.FOG`).
+> 2. Executing an autonomous **delta-debugging shrink run** on the noisy 6-step `cart-noisy` scenario.
+> 3. Eliminating 4 noisy, unrelated mutations while isolating the single root cause: `/items/0/lineTotal` (Reference `2` vs. Candidate `1`).
+> 4. Triggering an **independent replay** of the minimized 2-step scenario and verifying the regression outcome.
 
 ---
 
@@ -413,6 +418,8 @@ docker run --rm -it -p 4173:4173 --network host --entrypoint node behaviordiff:l
 ---
 
 ## 🌐 Deployment to Render
+
+> 🚀 **Live Production Deployment**: BehaviorDiff is actively deployed and accessible at **[https://behaviordiff.onrender.com/](https://behaviordiff.onrender.com/)** (and the Evidence Lab at **[https://behaviordiff.onrender.com/lab](https://behaviordiff.onrender.com/lab)**).
 
 BehaviorDiff is fully configured for zero-configuration, secure deployment as a **Web Service** on [Render](https://render.com/).
 
