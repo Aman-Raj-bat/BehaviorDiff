@@ -21,8 +21,16 @@ reproducible installs.
 
 ```bash
 npm ci --offline
+npm run build
 npm test
 npm run demo
+```
+
+`npm run build` creates a dependency-free production copy in `dist/` and
+syntax-checks the browser scripts. Run the built local workbench with:
+
+```bash
+node dist/bin/behavior-diff-workbench.mjs --port 4173
 ```
 
 `npm test` is the acceptance gate. It starts the fixture implementations as child
