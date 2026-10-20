@@ -240,18 +240,43 @@ test('workbench API uses fixed scenarios and performs a real replay action', asy
     assert.match(await labWithSlash.text(), /id="run-form"/);
     const script = await request('/app.js');
     assert.equal(script.status, 200);
+    assert.match(script.headers.get('content-type'), /^text\/javascript; charset=utf-8/);
     const appScript = await script.text();
     assert.match(appScript, /navigator\.clipboard\.writeText/);
     assert.match(appScript, /evidenceRail/);
     assert.match(appScript, /mismatchSpecimen/);
+    assert.match(appScript, /runView\.innerHTML/);
+    const landingScript = await request('/landing.js');
+    assert.equal(landingScript.status, 200);
+    assert.match(landingScript.headers.get('content-type'), /^text\/javascript; charset=utf-8/);
+    const landingScriptText = await landingScript.text();
+    assert.match(landingScriptText, /prefers-reduced-motion/);
+    assert.match(landingScriptText, /getBoundingClientRect/);
     const styles = await request('/styles.css');
     assert.equal(styles.status, 200);
+    assert.match(styles.headers.get('content-type'), /^text\/css; charset=utf-8/);
     const stylesText = await styles.text();
     assert.match(stylesText, /--signal-lime:\s*#D7FF64/);
+    assert.match(stylesText, /--type-body:\s*1rem/);
+    assert.match(stylesText, /\.preview-cursor/);
+    assert.match(stylesText, /\.lab-page \.lab-layout/);
+    assert.match(stylesText, /\.reduction-overview/);
     assert.match(stylesText, /\.specimen/);
     assert.match(stylesText, /\.reduction-trace/);
     const scenarios = await (await request('/api/scenarios')).json();
     assert.deepEqual(scenarios.scenarios.map((scenario) => scenario.id), ['cart-total', 'cart-total-pass', 'cart-noisy']);
+    const scenariosWithQuery = await request('/api/scenarios?refresh=1');
+    assert.equal(scenariosWithQuery.status, 200);
+    assert.match(scenariosWithQuery.headers.get('content-type'), /^application\/json; charset=utf-8/);
+    const runs = await request('/api/runs');
+    assert.equal(runs.status, 200);
+    assert.match(runs.headers.get('content-type'), /^application\/json; charset=utf-8/);
+    const unknown = await request('/not-a-valid-route');
+    assert.equal(unknown.status, 404);
+    assert.deepEqual(await unknown.json(), { error: 'not found' });
+    const nestedUnknown = await request('/lab/unknown');
+    assert.equal(nestedUnknown.status, 404);
+    assert.deepEqual(await nestedUnknown.json(), { error: 'not found' });
 
     const unsafe = await request('/api/runs', {
       method: 'POST',
