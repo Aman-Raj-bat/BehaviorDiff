@@ -260,6 +260,7 @@ const STATIC_FILES = Object.freeze({
   '/lab/': ['public/lab.html', 'text/html; charset=utf-8'],
   '/app.js': ['public/app.js', 'text/javascript; charset=utf-8'],
   '/landing.js': ['public/landing.js', 'text/javascript; charset=utf-8'],
+  '/interaction-effects.js': ['public/interaction-effects.js', 'text/javascript; charset=utf-8'],
   '/styles.css': ['public/styles.css', 'text/css; charset=utf-8'],
   '/logo.svg': ['public/logo.svg', 'image/svg+xml; charset=utf-8'],
   '/favicon.svg': ['public/favicon.svg', 'image/svg+xml; charset=utf-8'],
