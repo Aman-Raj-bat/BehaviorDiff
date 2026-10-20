@@ -9,9 +9,13 @@
     <link rel="stylesheet" href="/styles.css">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="alternate icon" href="/favicon.png" type="image/png">
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
+    <script defer src="/interaction-effects.js"></script>
   </head>
   <body class="lab-page">
     <a class="skip-link" href="#main-content">Skip to Evidence Lab</a>
+    <div id="evidence-fog" aria-hidden="true"></div>
     <div class="app-shell">
       <header class="topbar">
         <a class="wordmark" href="/" aria-label="BehaviorDiff workbench home">
@@ -76,7 +80,7 @@
                   <small>Used only in shrink mode</small>
                 </div>
 
-                <button id="run-button" class="primary-button" type="submit">
+                <button id="run-button" class="primary-button" data-particle-click data-particle-tone="dark" type="submit">
                   <span class="button-index" aria-hidden="true">→</span>
                   <span>Run investigation</span>
                   <span class="button-key" aria-hidden="true">⌘↵</span>
@@ -114,7 +118,7 @@
                   <code>cart-total</code><code>cart-total-pass</code><code>cart-noisy</code>
                 </div>
                 <div class="empty-boundary"><span class="boundary-dot" aria-hidden="true"></span><span>TRUSTED LOCAL BOUNDARY / CHECKED-IN FIXTURES ONLY</span></div>
-                <button id="empty-run-button" class="secondary-button empty-run-button" type="button">Run selected case <span aria-hidden="true">→</span></button>
+                <button id="empty-run-button" class="secondary-button empty-run-button" data-particle-click data-particle-tone="light" type="button">Run selected case <span aria-hidden="true">→</span></button>
               </section>
             </section>
             <div id="run-view" hidden></div>
