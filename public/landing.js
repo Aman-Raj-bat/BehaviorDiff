@@ -184,3 +184,85 @@ if (sequence && sequence.dataset.demoController !== 'active') {
     motionPreference.addEventListener('change', onMotionPreferenceChange);
   }
 }
+
+const haloElement = document.querySelector('#behavior-halo');
+const haloMotionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+let haloEffect;
+let haloRetryTimer;
+let haloAttempts = 0;
+
+function markHaloFallback(reason) {
+  if (!haloElement) return;
+  haloElement.dataset.state = reason;
+  haloElement.classList.add('is-static');
+}
+
+function destroyHalo() {
+  window.clearTimeout(haloRetryTimer);
+  haloRetryTimer = undefined;
+  haloAttempts = 0;
+  if (!haloEffect) return;
+  haloEffect.destroy?.();
+  haloEffect = undefined;
+}
+
+function initializeHalo() {
+  if (!haloElement || haloEffect || haloMotionPreference.matches) {
+    if (haloMotionPreference.matches) markHaloFallback('reduced-motion');
+    return;
+  }
+
+  const threeReady = Boolean(window.THREE);
+  const vantaReady = Boolean(window.VANTA?.HALO);
+  if (!threeReady || !vantaReady) {
+    haloAttempts += 1;
+    if (haloAttempts < 20) {
+      haloRetryTimer = window.setTimeout(initializeHalo, 150);
+    } else {
+      markHaloFallback('dependency-unavailable');
+    }
+    return;
+  }
+
+  try {
+    haloEffect = window.VANTA.HALO({
+      el: haloElement,
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      minHeight: 200,
+      minWidth: 200,
+      backgroundColor: 0x101316,
+      baseColor: 0x5967c8,
+      color2: 0x4f9fb7,
+      size: 1.62,
+      amplitudeFactor: 0.86,
+      ringFactor: 1.05,
+      rotationFactor: 0.85,
+      speed: 0.78,
+      xOffset: 0.12,
+      yOffset: 0.08,
+    });
+    haloElement.dataset.state = 'ready';
+    haloElement.classList.remove('is-static');
+  } catch {
+    markHaloFallback('initialization-failed');
+  }
+}
+
+haloMotionPreference.addEventListener?.('change', (event) => {
+  if (event.matches) {
+    destroyHalo();
+    markHaloFallback('reduced-motion');
+  } else {
+    haloElement?.classList.remove('is-static');
+    initializeHalo();
+  }
+});
+
+window.addEventListener('pagehide', destroyHalo);
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) initializeHalo();
+});
+
+initializeHalo();
