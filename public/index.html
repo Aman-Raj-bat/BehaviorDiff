@@ -9,8 +9,12 @@
     <link rel="stylesheet" href="/styles.css">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="alternate icon" href="/favicon.png" type="image/png">
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.halo.min.js"></script>
+    <script defer src="/interaction-effects.js"></script>
   </head>
   <body class="landing-page">
+    <div id="behavior-halo" aria-hidden="true"></div>
     <header class="landing-nav">
       <a class="landing-brand" href="/" aria-label="BehaviorDiff home">
         <span class="landing-brand-mark" aria-hidden="true"><img class="brand-logo" src="/logo.svg" alt=""></span>
@@ -24,7 +28,7 @@
         <a href="/lab">Evidence Lab</a>
         <a href="https://github.com/Aman-Raj-bat/BehaviorDiff" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
       </nav>
-      <a class="landing-nav-cta" href="/lab">Launch Evidence Lab <span aria-hidden="true">↗</span></a>
+      <a class="landing-nav-cta" data-particle-click data-particle-tone="light" href="/lab">Launch Evidence Lab <span aria-hidden="true">↗</span></a>
     </header>
 
     <main>
@@ -34,8 +38,8 @@
           <h1 id="hero-heading">Find the <span>difference.</span><br>Prove the <em>bug.</em></h1>
           <p class="hero-lede">BehaviorDiff compares reference and candidate HTTP/JSON behavior, cuts a noisy stateful scenario down to the steps that matter, and lets you replay the evidence.</p>
           <div class="hero-actions">
-            <a class="hero-primary-cta" href="/lab">Launch Evidence Lab <span aria-hidden="true">↗</span></a>
-            <a class="hero-secondary-cta" href="https://github.com/Aman-Raj-bat/BehaviorDiff" target="_blank" rel="noreferrer">View on GitHub <span aria-hidden="true">↗</span></a>
+            <a class="hero-primary-cta" data-particle-click data-particle-tone="dark" href="/lab">Launch Evidence Lab <span aria-hidden="true">↗</span></a>
+            <a class="hero-secondary-cta" data-particle-click data-particle-tone="light" href="https://github.com/Aman-Raj-bat/BehaviorDiff" target="_blank" rel="noreferrer">View on GitHub <span aria-hidden="true">↗</span></a>
           </div>
           <div class="hero-footnote">
              <span>CHECKED-IN FIXTURE</span>
@@ -165,7 +169,7 @@
 
       <section class="landing-cta" aria-labelledby="cta-heading">
         <div><p class="landing-kicker"><span class="landing-kicker-dot" aria-hidden="true"></span>Ready when the bug is not</p><h2 id="cta-heading">Bring the evidence, not the theater.</h2><p>Launch the local Evidence Lab to run a checked-in scenario, inspect the mismatch, shrink the noise, and replay what survived.</p></div>
-        <div class="landing-cta-actions"><a class="hero-primary-cta" href="/lab">Launch Evidence Lab <span aria-hidden="true">↗</span></a><a class="hero-secondary-cta" href="https://github.com/Aman-Raj-bat/BehaviorDiff" target="_blank" rel="noreferrer">View the repository <span aria-hidden="true">↗</span></a></div>
+        <div class="landing-cta-actions"><a class="hero-primary-cta" data-particle-click data-particle-tone="dark" href="/lab">Launch Evidence Lab <span aria-hidden="true">↗</span></a><a class="hero-secondary-cta" data-particle-click data-particle-tone="light" href="https://github.com/Aman-Raj-bat/BehaviorDiff" target="_blank" rel="noreferrer">View the repository <span aria-hidden="true">↗</span></a></div>
       </section>
     </main>
 
