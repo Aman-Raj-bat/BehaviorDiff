@@ -261,6 +261,10 @@ const STATIC_FILES = Object.freeze({
   '/app.js': ['public/app.js', 'text/javascript; charset=utf-8'],
   '/landing.js': ['public/landing.js', 'text/javascript; charset=utf-8'],
   '/styles.css': ['public/styles.css', 'text/css; charset=utf-8'],
+  '/logo.svg': ['public/logo.svg', 'image/svg+xml; charset=utf-8'],
+  '/favicon.svg': ['public/favicon.svg', 'image/svg+xml; charset=utf-8'],
+  '/favicon.png': ['public/favicon.png', 'image/png'],
+  '/hand_cursor.png': ['public/hand_cursor.png', 'image/png'],
 });
 
 function parseRunPath(pathname) {
@@ -324,7 +328,11 @@ export function createWorkbenchServer({
       const url = new URL(request.url, 'http://127.0.0.1');
       if (request.method === 'GET' && STATIC_FILES[url.pathname]) {
         const [relativePath, contentType] = STATIC_FILES[url.pathname];
-        const raw = await readFile(path.join(root, relativePath), 'utf8');
+        const encoding = contentType.startsWith('text/') || contentType.includes('svg') ? 'utf8' : undefined;
+        const raw = await readFile(path.join(root, relativePath), encoding).catch((error) => {
+          if (error.code === 'ENOENT') throw new WorkbenchRequestError('static asset not found', 404);
+          throw error;
+        });
         textResponse(response, 200, raw, contentType);
         return;
       }
