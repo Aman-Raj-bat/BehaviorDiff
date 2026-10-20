@@ -1,4 +1,4 @@
-# BehaviorDiff 🔬
+# BehaviorDiff
 
 > **Forensic Behavioral Differential Testing & Delta-Debugging Engine for HTTP/JSON Services**
 
@@ -10,37 +10,37 @@
 [![Live Website](https://img.shields.io/badge/Live%20Website-behaviordiff.onrender.com-success.svg?style=flat&logo=render)](https://behaviordiff.onrender.com/)
 [![Video Demo](https://img.shields.io/badge/Video%20Demo-YouTube%20Watch-red.svg?style=flat&logo=youtube)](https://youtu.be/6_B9Yxa2DHs)
 
-> 🌐 **Live Website**: [https://behaviordiff.onrender.com/](https://behaviordiff.onrender.com/)  
-> 🧪 **Evidence Lab GUI**: [https://behaviordiff.onrender.com/lab](https://behaviordiff.onrender.com/lab)  
-> 🎥 **Video Demo Walkthrough**: [https://youtu.be/6_B9Yxa2DHs](https://youtu.be/6_B9Yxa2DHs)
+> **Live Website**: [https://behaviordiff.onrender.com/](https://behaviordiff.onrender.com/)  
+> **Evidence Lab GUI**: [https://behaviordiff.onrender.com/lab](https://behaviordiff.onrender.com/lab)  
+> **Video Demo Walkthrough**: [https://youtu.be/6_B9Yxa2DHs](https://youtu.be/6_B9Yxa2DHs)
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [The Real-World Problem](#-the-real-world-problem)
-- [How BehaviorDiff Solves It](#-how-behaviordiff-solves-it)
-- [Technologies & Languages](#-technologies--languages)
-- [Architecture & Workflow](#-architecture--workflow)
+- [Overview](#overview)
+- [The Real-World Problem](#the-real-world-problem)
+- [How BehaviorDiff Solves It](#how-behaviordiff-solves-it)
+- [Technologies & Languages](#technologies--languages)
+- [Architecture & Workflow](#architecture--workflow)
   - [System Architecture Diagram](#system-architecture-diagram)
   - [Execution & Shrinking Workflow](#execution--shrinking-workflow)
-- [The Evidence Lab & Workbench](#-the-evidence-lab--workbench)
-- [Verification & Execution Gallery](#-verification--execution-gallery)
+- [The Evidence Lab & Workbench](#the-evidence-lab--workbench)
+- [Verification & Execution Gallery](#verification--execution-gallery)
   - [Automated Test Suite (87/87 Passed)](#1-automated-test-suite-8787-passed)
   - [Production Distribution Build](#2-production-distribution-build)
   - [Delta-Debugging & Shrinking Demo](#3-delta-debugging--shrinking-demo)
-- [Demo Walkthrough Video](#-demo-walkthrough-video)
-- [Scenario Anatomy & Delta Shrinking](#-scenario-anatomy--delta-shrinking)
-- [Getting Started & Installation](#-getting-started--installation)
-- [Running with Docker](#-running-with-docker)
-- [Deployment to Render](#-deployment-to-render)
-- [Built with OmniRush](#-built-with-omnirush)
-- [License & Copyright](#-license--copyright)
+- [Demo Walkthrough Video](#demo-walkthrough-video)
+- [Scenario Anatomy & Delta Shrinking](#scenario-anatomy--delta-shrinking)
+- [Getting Started & Installation](#getting-started--installation)
+- [Running with Docker](#running-with-docker)
+- [Deployment to Render](#deployment-to-render)
+- [Built with OmniRush](#built-with-omnirush)
+- [License & Copyright](#license--copyright)
 
 ---
 
-## 🌟 Overview
+## Overview
 
 **BehaviorDiff** is an enterprise-grade forensic testing engine designed to detect, isolate, and prove subtle behavioral regressions between two versions of an HTTP/JSON service (a trusted **Reference** vs. a **Candidate**).
 
@@ -50,7 +50,7 @@ Every run produces cryptographic, verifiable evidence artifacts with exact **RFC
 
 ---
 
-## 🛑 The Real-World Problem
+## The Real-World Problem
 
 Modern backend and microservice architectures suffer from insidious regressions that unit tests and mock-heavy integration suites fail to catch:
 
@@ -61,7 +61,7 @@ Modern backend and microservice architectures suffer from insidious regressions 
 
 ---
 
-## 💡 How BehaviorDiff Solves It
+## How BehaviorDiff Solves It
 
 BehaviorDiff introduces an automated, deterministic forensic pipeline:
 
@@ -73,7 +73,7 @@ BehaviorDiff introduces an automated, deterministic forensic pipeline:
 
 ---
 
-## 💻 Technologies & Languages
+## Technologies & Languages
 
 BehaviorDiff is engineered with a strict **Zero Runtime Dependencies** philosophy for its backend engine, guaranteeing maximum portability, security, and deterministic execution.
 
@@ -88,7 +88,7 @@ BehaviorDiff is engineered with a strict **Zero Runtime Dependencies** philosoph
 
 ---
 
-## 🏗️ Architecture & Workflow
+## Architecture & Workflow
 
 ### System Architecture Diagram
 
@@ -194,7 +194,7 @@ sequenceDiagram
 
 ---
 
-## 🧪 The Evidence Lab & Workbench
+## The Evidence Lab & Workbench
 
 BehaviorDiff comes equipped with an interactive **Evidence Lab** (`http://127.0.0.1:4173/lab`) powered by a high-performance, single-tenant local server (`src/workbench-server.mjs`).
 
@@ -206,7 +206,7 @@ BehaviorDiff comes equipped with an interactive **Evidence Lab** (`http://127.0.
 
 ---
 
-## 📸 Verification & Execution Gallery
+## Verification & Execution Gallery
 
 All execution flows have been validated with comprehensive test suites, production build gates, and automated end-to-end delta-debugging demos.
 
@@ -243,17 +243,17 @@ Demonstrating the reduction of a noisy 6-step cart checkout scenario down to the
 
 ---
 
-## 🎥 Demo Walkthrough Video
+## Demo Walkthrough Video
 
 Watch the comprehensive video walkthrough demonstrating the BehaviorDiff forensic engine, autonomous delta-debugging (shrinking), and the Evidence Lab in action:
 
 [![BehaviorDiff Demo Walkthrough Video](https://img.youtube.com/vi/6_B9Yxa2DHs/maxresdefault.jpg)](https://youtu.be/6_B9Yxa2DHs)
 
-| 📺 Video Demo Walkthrough | 🌐 Live Deployment |
+| Video Demo Walkthrough | Live Deployment |
 |---|---|
 | **YouTube**: [https://youtu.be/6_B9Yxa2DHs](https://youtu.be/6_B9Yxa2DHs) | **Render**: [https://behaviordiff.onrender.com/](https://behaviordiff.onrender.com/) |
 
-> 💡 **What the demo covers**:
+> **What the demo covers**:
 > 1. Launching the interactive **Evidence Lab** interface with dynamic 3D spatial atmosphere (`Vanta.FOG`).
 > 2. Executing an autonomous **delta-debugging shrink run** on the noisy 6-step `cart-noisy` scenario.
 > 3. Eliminating 4 noisy, unrelated mutations while isolating the single root cause: `/items/0/lineTotal` (Reference `2` vs. Candidate `1`).
@@ -261,7 +261,7 @@ Watch the comprehensive video walkthrough demonstrating the BehaviorDiff forensi
 
 ---
 
-## 🔬 Scenario Anatomy & Delta Shrinking
+## Scenario Anatomy & Delta Shrinking
 
 ### How It Solves Real-World Complex Scenarios
 
@@ -331,7 +331,7 @@ The original reported scenario (`scenarios/cart-noisy.json`) has **6 noisy steps
 
 ---
 
-## 🚀 Getting Started & Installation
+## Getting Started & Installation
 
 ### Prerequisites
 
@@ -389,7 +389,7 @@ Open your browser to:
 
 ---
 
-## 🐳 Running with Docker
+## Running with Docker
 
 BehaviorDiff includes a pinned Debian Bookworm container setup for isolated container execution.
 
@@ -417,9 +417,9 @@ docker run --rm -it -p 4173:4173 --network host --entrypoint node behaviordiff:l
 
 ---
 
-## 🌐 Deployment to Render
+## Deployment to Render
 
-> 🚀 **Live Production Deployment**: BehaviorDiff is actively deployed and accessible at **[https://behaviordiff.onrender.com/](https://behaviordiff.onrender.com/)** (and the Evidence Lab at **[https://behaviordiff.onrender.com/lab](https://behaviordiff.onrender.com/lab)**).
+> **Live Production Deployment**: BehaviorDiff is actively deployed and accessible at **[https://behaviordiff.onrender.com/](https://behaviordiff.onrender.com/)** (and the Evidence Lab at **[https://behaviordiff.onrender.com/lab](https://behaviordiff.onrender.com/lab)**).
 
 BehaviorDiff is fully configured for zero-configuration, secure deployment as a **Web Service** on [Render](https://render.com/).
 
@@ -462,11 +462,11 @@ If configuring the web service manually in the Render dashboard:
 | **Start Command** | `node bin/behavior-diff-workbench.mjs` | Starts workbench server with dynamic port and host detection |
 | **Environment Variables** | `HOST=0.0.0.0`<br>`WORKBENCH_AUTH_TOKEN=<random-secret>` | `HOST=0.0.0.0` binds to all interfaces; `WORKBENCH_AUTH_TOKEN` secures execution APIs |
 
-> ℹ️ *Note: Render dynamically assigns the `PORT` environment variable (e.g., `10000`). BehaviorDiff automatically reads `process.env.PORT` on startup.*
+> *Note: Render dynamically assigns the `PORT` environment variable (e.g., `10000`). BehaviorDiff automatically reads `process.env.PORT` on startup.*
 
 ---
 
-### 🛡️ Cloud Security & Access Protection Model
+### Cloud Security & Access Protection Model
 
 When deployed publicly on Render or any remote host, BehaviorDiff enforces strict access boundaries:
 
@@ -485,7 +485,7 @@ When deployed publicly on Render or any remote host, BehaviorDiff enforces stric
 
 ---
 
-### 🔑 Authenticating in the Evidence Lab
+### Authenticating in the Evidence Lab
 
 When accessing your Render deployment:
 
@@ -508,7 +508,7 @@ When accessing your Render deployment:
 
 ---
 
-## ⚡ Built with OmniRush
+## Built with OmniRush
 
 BehaviorDiff was architected, engineered, and hardened using **OmniRush**—the advanced autonomous software synthesis and agentic acceleration methodology.
 
@@ -519,7 +519,7 @@ Through OmniRush:
 
 ---
 
-## 📄 License & Copyright
+## License & Copyright
 
 ```
 Copyright 2026 Aman Raj
