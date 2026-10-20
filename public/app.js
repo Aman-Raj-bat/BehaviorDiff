@@ -774,3 +774,88 @@ updateModeControls();
 renderScenarioDetail();
 loadScenarios();
 refreshRuns();
+
+const fogElement = document.querySelector('#evidence-fog');
+const fogMotionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+let fogEffect;
+let fogRetryTimer;
+let fogAttempts = 0;
+
+function markFogFallback(reason) {
+  if (!fogElement) return;
+  fogElement.dataset.state = reason;
+  fogElement.classList.add('is-static');
+}
+
+function destroyFog() {
+  window.clearTimeout(fogRetryTimer);
+  fogRetryTimer = undefined;
+  fogAttempts = 0;
+  if (!fogEffect) return;
+  fogEffect.destroy?.();
+  fogEffect = undefined;
+}
+
+function initializeFog() {
+  if (!fogElement || fogEffect || fogMotionPreference.matches) {
+    if (fogMotionPreference.matches) markFogFallback('reduced-motion');
+    return;
+  }
+
+  const threeReady = Boolean(window.THREE?.WebGLRenderer);
+  const vantaReady = Boolean(window.VANTA?.FOG);
+  if (!threeReady || !vantaReady) {
+    fogAttempts += 1;
+    if (fogAttempts < 20) {
+      fogRetryTimer = window.setTimeout(initializeFog, 150);
+    } else {
+      markFogFallback('dependency-unavailable');
+    }
+    return;
+  }
+
+  let candidateEffect;
+  try {
+    candidateEffect = window.VANTA.FOG({
+      el: fogElement,
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      minHeight: 200,
+      minWidth: 200,
+      highlightColor: 0x8aa8c1,
+      midtoneColor: 0x566981,
+      lowlightColor: 0x252f40,
+      baseColor: 0x101316,
+      blurFactor: 0.58,
+      zoom: 0.74,
+      speed: 0.9,
+      scale: 1.4,
+      scaleMobile: 1.8,
+    });
+    if (!candidateEffect?.getCanvasElement?.()) throw new Error('Vanta FOG canvas was unavailable');
+    fogEffect = candidateEffect;
+    fogElement.dataset.state = 'ready';
+    fogElement.classList.remove('is-static');
+  } catch {
+    candidateEffect?.destroy?.();
+    markFogFallback('initialization-failed');
+  }
+}
+
+fogMotionPreference.addEventListener?.('change', (event) => {
+  if (event.matches) {
+    destroyFog();
+    markFogFallback('reduced-motion');
+  } else {
+    fogElement?.classList.remove('is-static');
+    initializeFog();
+  }
+});
+
+window.addEventListener('pagehide', destroyFog);
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) initializeFog();
+});
+
+initializeFog();
