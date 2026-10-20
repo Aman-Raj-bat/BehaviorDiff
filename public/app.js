@@ -19,6 +19,8 @@ const maxAttempts = $('#max-attempts');
 const topbarContext = $('#topbar-context');
 const emptyState = $('#empty-state');
 const runView = $('#run-view');
+const emptyRunButton = $('#empty-run-button');
+const emptyMode = $('#empty-mode');
 
 function escapeHtml(value) {
   return String(value)
@@ -80,6 +82,7 @@ function selectedMode() {
 function updateModeControls() {
   const shrinking = selectedMode() === 'shrink';
   maxAttempts.disabled = !shrinking;
+  if (emptyMode) emptyMode.textContent = shrinking ? 'Shrink / verified reduction trace' : 'Compare / paired response run';
 }
 
 function renderScenarioOptions() {
@@ -755,6 +758,10 @@ scenarioSelect.addEventListener('change', () => selectScenario(scenarioSelect.va
 topbarScenarioSelect.addEventListener('change', () => selectScenario(topbarScenarioSelect.value));
 runForm.addEventListener('change', updateModeControls);
 runForm.addEventListener('submit', submitRun);
+emptyRunButton?.addEventListener('click', () => {
+  scenarioSelect.focus({ preventScroll: true });
+  if (scenarioSelect.value) runForm.requestSubmit();
+});
 runForm.addEventListener('keydown', (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
     event.preventDefault();

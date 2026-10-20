@@ -7,19 +7,15 @@
     <meta name="theme-color" content="#101316">
     <title>BehaviorDiff — Evidence Lab</title>
     <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.png" type="image/png">
   </head>
   <body class="lab-page">
     <a class="skip-link" href="#main-content">Skip to Evidence Lab</a>
     <div class="app-shell">
       <header class="topbar">
         <a class="wordmark" href="/" aria-label="BehaviorDiff workbench home">
-          <span class="wordmark-mark" aria-hidden="true">
-            <span class="mark-track mark-track-one"></span>
-            <span class="mark-track mark-track-two"></span>
-            <span class="mark-node mark-node-one"></span>
-            <span class="mark-node mark-node-two"></span>
-            <span class="mark-node mark-node-diff"></span>
-          </span>
+          <span class="wordmark-mark" aria-hidden="true"><img class="brand-logo" src="/logo.svg" alt=""></span>
           <span class="wordmark-copy">
             <strong>BEHAVIOR<span>DIFF</span></strong>
             <small>EVIDENCE LAB / LOCAL INSTRUMENT</small>
@@ -111,6 +107,15 @@
                 <div><span class="empty-number">02</span><strong>Isolate</strong><small>Pin the first business difference.</small></div>
                 <div><span class="empty-number">03</span><strong>Prove</strong><small>Replay only what the evidence supports.</small></div>
               </div>
+              <section class="empty-workspace-card" aria-label="Ready investigation summary">
+                <div class="empty-workspace-heading"><span class="empty-kicker">Ready to investigate</span><span class="empty-mode" id="empty-mode">Compare / paired response run</span></div>
+                <p>Choose one of the allowlisted cases, then run the real loopback fixtures. No result is loaded until the comparison returns.</p>
+                <div class="empty-case-list" aria-label="Available checked-in scenarios">
+                  <code>cart-total</code><code>cart-total-pass</code><code>cart-noisy</code>
+                </div>
+                <div class="empty-boundary"><span class="boundary-dot" aria-hidden="true"></span><span>TRUSTED LOCAL BOUNDARY / CHECKED-IN FIXTURES ONLY</span></div>
+                <button id="empty-run-button" class="secondary-button empty-run-button" type="button">Run selected case <span aria-hidden="true">→</span></button>
+              </section>
             </section>
             <div id="run-view" hidden></div>
           </section>

@@ -637,6 +637,7 @@ input:disabled { color: var(--text-muted); background: rgba(13, 17, 19, .35); }
 }
 .landing-brand { display: inline-flex; align-items: center; justify-self: start; gap: 11px; min-width: 0; color: var(--landing-ink); }
 .landing-brand-mark { position: relative; width: 31px; height: 31px; flex: 0 0 auto; overflow: hidden; border: 1px solid var(--landing-line-strong); border-radius: 8px; background: #151a1e; }
+.landing-brand-mark .brand-logo { padding: 2px; }
 .landing-mark-track { position: absolute; left: 4px; width: 22px; height: 1px; transform-origin: left center; background: var(--blue); }
 .landing-mark-track-one { top: 10px; transform: rotate(24deg); }
 .landing-mark-track-two { top: 20px; transform: rotate(-24deg); background: var(--vermilion); }
@@ -1189,6 +1190,21 @@ select, input[type="number"] { min-height: 48px; font-size: var(--type-body); li
 }
 .lab-page .empty-state p { max-width: 600px; font-size: var(--type-body); }
 .lab-page .empty-sequence { background: rgba(21, 26, 30, .72); }
+.lab-page .empty-workspace-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  background: rgba(13, 17, 19, .42);
+}
+.lab-page .empty-workspace-heading { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+.lab-page .empty-mode { color: var(--text-soft); font-family: var(--font-mono); font-size: var(--type-meta); }
+.lab-page .empty-workspace-card p { margin: 0; color: var(--text-soft); font-size: var(--type-tech); line-height: 1.5; }
+.lab-page .empty-case-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.lab-page .empty-case-list code { padding: 5px 7px; border: 1px solid var(--line-strong); color: var(--blue); font-size: var(--type-meta); }
+.lab-page .empty-boundary { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-family: var(--font-mono); font-size: var(--type-label); }
+.lab-page .empty-run-button { width: max-content; }
 .lab-page .run-heading { padding-top: 0; }
 .lab-page .run-heading h2 { max-width: 760px; font-size: clamp(32px, 3.4vw, 54px); }
 .lab-page .primary-layout {
