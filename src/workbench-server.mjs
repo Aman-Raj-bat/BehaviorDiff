@@ -259,6 +259,7 @@ const STATIC_FILES = Object.freeze({
   '/lab': ['public/lab.html', 'text/html; charset=utf-8'],
   '/lab/': ['public/lab.html', 'text/html; charset=utf-8'],
   '/app.js': ['public/app.js', 'text/javascript; charset=utf-8'],
+  '/landing.js': ['public/landing.js', 'text/javascript; charset=utf-8'],
   '/styles.css': ['public/styles.css', 'text/css; charset=utf-8'],
 });
 
