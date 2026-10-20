@@ -1348,6 +1348,29 @@ select, input[type="number"] { min-height: 48px; font-size: var(--type-body); li
   .lab-page .reduction-overview { padding: 13px; }
 }
 
+/* Optional Vanta HALO layer for the landing page only. Content remains above it. */
+.landing-page { position: relative; isolation: isolate; min-height: 100vh; }
+#behavior-halo {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #101316;
+  opacity: .46;
+}
+#behavior-halo canvas {
+  display: block;
+  pointer-events: none !important;
+}
+#behavior-halo.is-static { opacity: .22; }
+.landing-page > header,
+.landing-page > main,
+.landing-page > footer { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  #behavior-halo { opacity: .18; }
+}
+
 /* Evidence Lab atmosphere stays behind the diagnostic surfaces. */
 .lab-page { position: relative; isolation: isolate; min-height: 100vh; }
 .lab-page .app-shell { position: relative; z-index: 1; }
