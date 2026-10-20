@@ -1348,6 +1348,49 @@ select, input[type="number"] { min-height: 48px; font-size: var(--type-body); li
   .lab-page .reduction-overview { padding: 13px; }
 }
 
+/* Evidence Lab atmosphere stays behind the diagnostic surfaces. */
+.lab-page { position: relative; isolation: isolate; min-height: 100vh; }
+.lab-page .app-shell { position: relative; z-index: 1; }
+.lab-page .topbar {
+  width: min(1440px, calc(100% - 64px));
+  min-height: 70px;
+  padding: 0 clamp(16px, 2.4vw, 28px);
+  margin: 0 auto;
+  border: 1px solid rgba(225, 235, 245, .35);
+  border-top: 0;
+  border-radius: 0 0 28px 28px;
+  background: #8996a5;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .26);
+  backdrop-filter: none;
+}
+.lab-page .wordmark { color: #111820; }
+.lab-page .wordmark strong span { color: #30451f; }
+.lab-page .wordmark-mark { border-color: rgba(17, 24, 32, .32); background: rgba(244, 241, 232, .42); }
+.lab-page .topbar-status,
+.lab-page .topbar-scenario { color: #283541; }
+.lab-page .topbar-scenario > span { color: #3d4c59; }
+.lab-page .topbar-divider { background: rgba(17, 24, 32, .28); }
+.lab-page .topbar-scenario select { border-color: rgba(17, 24, 32, .36); background: rgba(255, 255, 255, .18); color: #111820; }
+.lab-page .topbar-context { border-left-color: rgba(17, 24, 32, .28); }
+.lab-page .topbar-context span { color: #3d4c59; }
+.lab-page .topbar-context strong { color: #111820; }
+.lab-page .primary-button,
+.lab-page .secondary-button { border-radius: 12px; }
+.lab-page .primary-button { border-radius: 14px; }
+.lab-page .copy-button { border-radius: 10px; }
+.lab-page .text-button { border-radius: 6px; }
+.lab-page .primary-button:active,
+.lab-page .secondary-button:active,
+.lab-page .copy-button:active { transform: translateY(0) scale(.985); }
+.lab-page .secondary-button:disabled,
+.lab-page .copy-button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+@media (max-width: 860px) {
+  .lab-page .topbar { width: min(100% - 36px, 680px); }
+}
+@media (max-width: 720px) {
+  .lab-page .topbar { width: min(100% - 26px, 520px); min-height: 61px; padding: 0 14px; }
+}
 /* Opt-in particle feedback for primary actions only. */
 [data-particle-click] { position: relative; }
 .particle-click-layer {
