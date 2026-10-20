@@ -263,13 +263,16 @@ Start it after installing dependencies:
 npm run workbench
 ```
 
-Open `http://127.0.0.1:4173/`. To use an automatically allocated port, run:
+The root URL is the product landing page. The working Evidence Lab is available at
+`http://127.0.0.1:4173/lab` (the landing page's **Launch Evidence Lab** action
+opens this route). Open `http://127.0.0.1:4173/` for the landing page. To use an
+automatically allocated port, run:
 
 ```bash
 node bin/behavior-diff-workbench.mjs --port 0
 ```
 
-For the end-to-end judge walkthrough, choose `cart-noisy`, select **Shrink**, and
+For the end-to-end judge walkthrough, open `/lab`, choose `cart-noisy`, select **Shrink**, and
 press **Run investigation**. The browser then waits for the real six-step replay,
 shows the line-total regression, lists the actual accepted and rejected reduction
 replays, and renders the resulting two-step scenario. Use **Replay minimized
