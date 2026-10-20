@@ -3,129 +3,178 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="BehaviorDiff local evidence investigation workbench">
+    <meta name="description" content="BehaviorDiff finds semantic API regressions, minimizes noisy scenarios, and produces replayable evidence.">
     <meta name="theme-color" content="#101316">
-    <title>BehaviorDiff — Evidence Lab</title>
+    <title>BehaviorDiff — Find the difference. Prove the bug.</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
-  <body>
-    <div class="app-shell">
-      <header class="topbar">
-        <a class="wordmark" href="/" aria-label="BehaviorDiff workbench home">
-          <span class="wordmark-mark" aria-hidden="true">
-            <span class="mark-track mark-track-one"></span>
-            <span class="mark-track mark-track-two"></span>
-            <span class="mark-node mark-node-one"></span>
-            <span class="mark-node mark-node-two"></span>
-            <span class="mark-node mark-node-diff"></span>
-          </span>
-          <span>
-            <strong>BEHAVIOR<span>DIFF</span></strong>
-            <small>EVIDENCE LAB / LOCAL INSTRUMENT</small>
-          </span>
-        </a>
-        <label class="topbar-scenario">
-          <span>SCENARIO</span>
-          <select id="topbar-scenario-select" aria-label="Current trusted scenario">
-            <option value="">Loading…</option>
-          </select>
-        </label>
-        <div class="topbar-status">
-          <span class="status-led" aria-hidden="true"></span>
-          <span>LOOPBACK ONLY</span>
-          <span class="topbar-divider" aria-hidden="true"></span>
-          <span class="topbar-readout">EVIDENCE-LED DEBUGGING</span>
-        </div>
-        <div id="topbar-context" class="topbar-context" aria-live="polite">
-          <span>CASE</span>
-          <strong>NO SPECIMEN LOADED</strong>
-        </div>
-      </header>
+  <body class="landing-page">
+    <header class="landing-nav">
+      <a class="landing-brand" href="/" aria-label="BehaviorDiff home">
+        <span class="landing-brand-mark" aria-hidden="true">
+          <span class="landing-mark-track landing-mark-track-one"></span>
+          <span class="landing-mark-track landing-mark-track-two"></span>
+          <span class="landing-mark-node landing-mark-node-one"></span>
+          <span class="landing-mark-node landing-mark-node-two"></span>
+          <span class="landing-mark-node landing-mark-node-diff"></span>
+        </span>
+        <span class="landing-brand-copy">
+          <strong>BEHAVIOR<span>DIFF</span></strong>
+          <small>EVIDENCE LAB / LOCAL INSTRUMENT</small>
+        </span>
+      </a>
+      <nav class="landing-links" aria-label="Primary navigation">
+        <a href="#workflow">How it works</a>
+        <a href="/lab">Evidence Lab</a>
+        <a href="https://github.com/Aman-Raj-bat/BehaviorDiff" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+      <a class="landing-nav-cta" href="/lab">Launch Evidence Lab <span aria-hidden="true">↗</span></a>
+    </header>
 
-      <div class="workspace">
-        <aside class="control-rail">
-          <div class="rail-stamp" aria-hidden="true">
-            <span>BD / 01</span>
-            <span>FIELD UNIT</span>
+    <main>
+      <section class="landing-hero" aria-labelledby="hero-heading">
+        <div class="hero-copy">
+          <p class="landing-kicker"><span class="landing-kicker-dot" aria-hidden="true"></span>Local forensic instrument / v1</p>
+          <h1 id="hero-heading">Find the <span>difference.</span><br>Prove the <em>bug.</em></h1>
+          <p class="hero-lede">BehaviorDiff compares reference and candidate HTTP/JSON behavior, cuts a noisy stateful scenario down to the steps that matter, and lets you replay the evidence.</p>
+          <div class="hero-actions">
+            <a class="hero-primary-cta" href="/lab">Launch Evidence Lab <span aria-hidden="true">↗</span></a>
+            <a class="hero-secondary-cta" href="https://github.com/Aman-Raj-bat/BehaviorDiff" target="_blank" rel="noreferrer">View on GitHub <span aria-hidden="true">↗</span></a>
           </div>
-
-          <form id="run-form" class="run-form">
-            <div class="rail-heading">
-              <span class="eyebrow">01 / Case file</span>
-              <h1>Choose a specimen.</h1>
-              <p class="muted">Run the trusted pair. Read what the fixtures actually returned.</p>
-            </div>
-
-            <label for="scenario-select" class="control-label">Trusted scenario</label>
-            <select id="scenario-select" name="scenario" required>
-              <option value="">Loading scenarios…</option>
-            </select>
-            <div id="scenario-detail" class="scenario-detail" aria-live="polite"></div>
-
-            <fieldset class="mode-fieldset">
-              <legend>Investigation mode</legend>
-              <label class="mode-option">
-                <input type="radio" name="mode" value="run" checked>
-                <span><strong>Compare</strong><small>One paired replay</small></span>
-              </label>
-              <label class="mode-option">
-                <input type="radio" name="mode" value="shrink">
-                <span><strong>Shrink</strong><small>Verify the reduction trail</small></span>
-              </label>
-            </fieldset>
-
-            <label for="max-attempts" class="control-label">Shrink attempt budget</label>
-            <input id="max-attempts" name="maxAttempts" type="number" min="1" max="10000" value="100" disabled>
-            <button id="run-button" class="primary-button" type="submit">
-              <span class="button-index">→</span>
-              <span>Run investigation</span>
-              <span class="button-key" aria-hidden="true">⌘↵</span>
-            </button>
-            <div id="run-status" class="form-status" aria-live="polite"></div>
-          </form>
-
-          <div class="rail-note safety-note">
-            <div class="eyebrow">Boundary / hard limit</div>
-            <p>Only checked-in scenarios and loopback fixtures can execute. No remote URLs, shell strings, or user programs enter the lab.</p>
+          <div class="hero-footnote">
+             <span>CHECKED-IN FIXTURE</span>
+             <code>cart-noisy</code>
+             <span class="hero-footnote-rule" aria-hidden="true"></span>
+             <span>SCRIPTED SHOWCASE / NO LIVE CALLS</span>
           </div>
+        </div>
 
-          <section class="recent-section">
-            <div class="section-heading">
-              <div class="eyebrow">02 / Recent evidence</div>
-              <button id="refresh-runs" class="text-button" type="button">Reload</button>
-            </div>
-            <div id="recent-runs" class="recent-runs"><span class="muted">No runs loaded.</span></div>
-          </section>
-        </aside>
+        <div class="hero-side-note" aria-label="Showcase note">
+          <span>01 / SHOWCASE</span>
+           <p>A six-step regression specimen composed from verified fixture evidence, then reduced to the two steps that preserve the target.</p>
+        </div>
 
-        <main id="main-content" class="main-content" tabindex="-1">
-          <section class="empty-state">
-            <div class="empty-kicker">EVIDENCE LAB / READY</div>
-            <div class="empty-layout">
-              <div>
-                <h2>Make a behavior mismatch legible.</h2>
-                <p>Pair two local API implementations. Inspect the response specimen. Reduce the failing scenario without losing the target.</p>
-              </div>
-              <div class="empty-instrument" aria-label="BehaviorDiff comparison instrument diagram">
-                <div class="instrument-grid"></div>
-                <span class="instrument-label instrument-label-top">REFERENCE</span>
-                <span class="instrument-label instrument-label-bottom">CANDIDATE</span>
-                <span class="instrument-line instrument-line-one"></span>
-                <span class="instrument-line instrument-line-two"></span>
-                <span class="instrument-junction"></span>
-                <span class="instrument-target">Δ</span>
+        <div class="product-window-wrap">
+          <article class="product-window" data-demo-sequence aria-label="BehaviorDiff Evidence Lab product preview">
+            <!-- The supplied hand asset was not present in the workspace at implementation time.
+                 Keep the choreography hook empty rather than substituting an illustration. -->
+            <span class="preview-cursor" aria-hidden="true" data-cursor-asset="unavailable" hidden>
+              <span class="preview-cursor-ripple"></span>
+            </span>
+            <header class="window-chrome">
+              <div class="window-controls" aria-hidden="true"><i></i><i></i><i></i></div>
+              <div class="window-location"><span>LOCAL / EVIDENCE LAB</span><strong>cart-noisy / minimized replay</strong></div>
+              <div class="window-status"><span class="showcase-label">SCRIPTED SHOWCASE</span><span class="window-outcome">REGRESSION</span></div>
+            </header>
+            <div class="window-body">
+              <aside class="preview-rail" aria-label="Scenario trace">
+                <div class="preview-rail-heading"><span>CASE TRACE / SOURCE</span><strong>cart-noisy</strong></div>
+                <p class="preview-rail-note">Stateful request sequence</p>
+                <ol class="preview-steps">
+                  <li class="preview-step is-removed"><span>01</span><strong>noise-health-before</strong><i>×</i></li>
+                  <li class="preview-step is-removed"><span>02</span><strong>noise-create-cart</strong><i>×</i></li>
+                  <li class="preview-step is-retained"><span>03</span><strong>create-cart</strong><i>✓</i></li>
+                  <li class="preview-step is-mismatch" data-demo-target="mismatch"><span>04</span><strong>add-item</strong><i>Δ</i></li>
+                  <li class="preview-step is-removed"><span>05</span><strong>read-cart</strong><i>×</i></li>
+                  <li class="preview-step is-removed"><span>06</span><strong>noise-health-after</strong><i>×</i></li>
+                </ol>
+                <div class="preview-rail-legend"><span><i class="legend-retained"></i>retained</span><span><i class="legend-removed"></i>removed</span></div>
+              </aside>
+
+              <div class="preview-main">
+                <div class="preview-main-heading">
+                  <div><span>MINIMIZED REPLAY / FINDING</span><strong>Reference vs candidate</strong></div>
+                  <span class="preview-case-tag">BUSINESS DIFFERENCE</span>
+                </div>
+
+                <section class="preview-finding" data-demo-target="finding" aria-label="Recorded mismatch specimen from the minimized replay">
+                  <div class="preview-finding-top"><span>FIRST DIFFERENCE</span><span>step · add-item</span></div>
+                  <h2>One field. Two behaviors.</h2>
+                  <div class="preview-values">
+                    <div class="preview-value reference-value"><span>REFERENCE</span><strong>2</strong></div>
+                    <span class="preview-value-arrow" aria-hidden="true">→</span>
+                    <div class="preview-value candidate-value"><span>CANDIDATE</span><strong>1</strong></div>
+                  </div>
+                  <div class="preview-pointer" data-demo-target="pointer"><span>JSON POINTER</span><code>/items/0/lineTotal</code></div>
+                </section>
+
+                <div class="preview-response-grid" aria-label="Recorded response comparison">
+                  <div class="preview-response reference-response">
+                    <div class="preview-response-head"><span><i></i>REFERENCE</span><b>HTTP 200</b></div>
+                    <pre>{
+  "quantity": 2,
+  "lineTotal": <mark>2</mark>,
+  "total": 2
+}</pre>
+                  </div>
+                  <div class="preview-response candidate-response">
+                    <div class="preview-response-head"><span><i></i>CANDIDATE</span><b>HTTP 200</b></div>
+                    <pre>{
+  "quantity": 2,
+  "lineTotal": <mark>1</mark>,
+  "total": 1
+}</pre>
+                  </div>
+                </div>
+
+                <section class="preview-reduction" data-demo-target="reduction" aria-label="Reduction evidence">
+                  <div class="preview-reduction-copy"><span>REDUCTION TRACE</span><strong>6 steps <b>→</b> 2 retained</strong><p>Noise removed while the target signature stayed the same.</p></div>
+                  <div class="preview-retained-steps"><span>RETAINED</span><code>create-cart</code><code>add-item</code></div>
+                </section>
+
+                <div class="preview-proof" data-demo-target="replay"><span class="preview-proof-stamp">REPLAY EVIDENCE</span><span>scenario.replay.json · target signature preserved</span></div>
               </div>
             </div>
-            <div class="empty-grid">
-              <div><span class="empty-number">01</span><strong>Compare</strong><small>Two real HTTP response bodies, held to the same request.</small></div>
-              <div><span class="empty-number">02</span><strong>Locate</strong><small>A JSON Pointer pins the difference to an exact field.</small></div>
-              <div><span class="empty-number">03</span><strong>Reduce</strong><small>Every accepted operation is a verified replay, not a guess.</small></div>
-            </div>
-            <div class="empty-footer"><span>SELECT A TRUSTED SCENARIO TO BEGIN</span><span class="empty-footer-rule"></span><span>NO MOCKS / NO ESTIMATES</span></div>
-          </section>
-        </main>
-      </div>
-    </div>
-    <script type="module" src="/app.js"></script>
+            <footer class="window-footer">
+              <div class="demo-phases" aria-label="Presentation sequence">
+                <span class="is-active" data-phase="compare">01 Compare</span>
+                <span data-phase="mismatch">02 Mismatch</span>
+                <span data-phase="path">03 Exact path</span>
+                <span data-phase="reduce">04 Reduce</span>
+                <span data-phase="replay">05 Replay</span>
+              </div>
+              <span class="window-disclaimer">CHECKED-IN EVIDENCE / PRESENTATION ONLY</span>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+      <section class="evidence-strip" aria-label="Showcase evidence summary">
+        <div><span>SPECIMEN</span><strong>cart-noisy</strong></div>
+        <div><span>FAILING STEP</span><strong>add-item</strong></div>
+        <div><span>POINTER</span><strong>/items/0/lineTotal</strong></div>
+        <div><span>OBSERVED IN MINIMIZED REPLAY</span><strong><b>2</b> reference <i>→</i> <em>1</em> candidate</strong></div>
+      </section>
+
+      <section class="workflow-section" id="workflow" aria-labelledby="workflow-heading">
+        <div class="section-intro">
+          <p class="landing-kicker"><span class="landing-kicker-dot" aria-hidden="true"></span>From signal to proof</p>
+          <h2 id="workflow-heading">A shorter path to a trustworthy answer.</h2>
+          <p>Not a dashboard of guesses. A bounded investigation that keeps the requests, responses, mismatch, and replay visible.</p>
+        </div>
+        <div class="workflow-rail">
+          <article class="workflow-stage">
+            <div class="workflow-index">01</div>
+            <div class="workflow-copy"><h3>Detect</h3><p>Compare the same stateful request sequence against reference and candidate behavior. The first unignored semantic difference becomes a stable target.</p><div class="workflow-detail detect-detail"><span>REFERENCE</span><code>/items/0/lineTotal <b>2</b></code><span>CANDIDATE</span><code>/items/0/lineTotal <em>1</em></code></div></div>
+          </article>
+          <article class="workflow-stage">
+            <div class="workflow-index">02</div>
+            <div class="workflow-copy"><h3>Minimize</h3><p>Delete noisy steps and simplify scenario values through actual fixture replays, accepting only candidates that preserve the target signature.</p><div class="workflow-detail minimize-detail"><span class="workflow-noise">noise</span><strong>6</strong><i>→</i><strong>2</strong><span class="workflow-retained">create-cart · add-item</span></div></div>
+          </article>
+          <article class="workflow-stage">
+            <div class="workflow-index">03</div>
+            <div class="workflow-copy"><h3>Prove</h3><p>Replay the exported minimized scenario independently. Inspect the recorded bodies and evidence instead of trusting a green summary.</p><div class="workflow-detail prove-detail"><span class="prove-file">scenario.replay.json</span><span class="prove-status">REGRESSION</span><code>BUSINESS_DIFFERENCE</code></div></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="landing-cta" aria-labelledby="cta-heading">
+        <div><p class="landing-kicker"><span class="landing-kicker-dot" aria-hidden="true"></span>Ready when the bug is not</p><h2 id="cta-heading">Bring the evidence, not the theater.</h2><p>Launch the local Evidence Lab to run a checked-in scenario, inspect the mismatch, shrink the noise, and replay what survived.</p></div>
+        <div class="landing-cta-actions"><a class="hero-primary-cta" href="/lab">Launch Evidence Lab <span aria-hidden="true">↗</span></a><a class="hero-secondary-cta" href="https://github.com/Aman-Raj-bat/BehaviorDiff" target="_blank" rel="noreferrer">View the repository <span aria-hidden="true">↗</span></a></div>
+      </section>
+    </main>
+
+    <footer class="landing-footer"><span>BEHAVIOR<span>DIFF</span> / LOCAL EVIDENCE LAB</span><span>Loopback fixtures · reproducible artifacts · no external service</span></footer>
+    <script type="module" src="/landing.js"></script>
   </body>
 </html>
